@@ -49,7 +49,7 @@
 
           <div class="card scoreboard">
             <div class="team-block">
-              <div class="mini-label">Tilburg</div>
+              <div id="teamHomeName" class="mini-label">Tilburg</div>
               <div id="scoreHome" class="score-value">0</div>
             </div>
 
@@ -60,7 +60,7 @@
                 <button id="startClockBtn" class="btn small" type="button">Start</button>
                 <button id="pauseClockBtn" class="btn small secondary" type="button">Stop</button>
                 <button id="resetClockBtn" class="btn small secondary" type="button">Reset</button>
-                <button id="nextPeriodBtn" class="btn small secondary" type="button">Volgende periode</button>
+                <button id="nextPeriodBtn" class="btn small secondary" type="button">Volgende</button>
               </div>
             </div>
 

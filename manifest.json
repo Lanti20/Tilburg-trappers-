@@ -1,8 +1,9 @@
 const STORAGE_KEY = 'u11-hockey-tracker-v1';
+const LEGACY_STORAGE_KEY = 'tilburg-trappers-u11-tracker-v1';
 const TARGET_SCORE = 10;
 const DEFAULT_TEAM_NAME = 'Tilburg Trappers U11';
 
-function buildDefaultSchedule() {
+function createDefaultSchedule() {
   return [
     { id: 'day-1', date: '12 sep 2026', opponent: 'Aalsmeer', venue: 'Thuis', status: 'In planning' },
     { id: 'day-2', date: '19 sep 2026', opponent: 'Dordrecht', venue: 'Uit', status: 'In planning' },
@@ -40,9 +41,9 @@ function buildMatchState(matchId) {
 }
 
 function createDefaultState() {
-  const schedule = buildDefaultSchedule();
+  const schedule = createDefaultSchedule();
   const initialMatchId = schedule[0] ? schedule[0].id : null;
-  const state = {
+  const base = {
     version: '1.0.0',
     teamName: DEFAULT_TEAM_NAME,
     schedule: schedule,
@@ -51,27 +52,26 @@ function createDefaultState() {
     matchStates: {},
     appVersion: '1.0.0'
   };
-
   if (initialMatchId) {
-    state.matchStates[initialMatchId] = buildMatchState(initialMatchId);
+    base.matchStates[initialMatchId] = buildMatchState(initialMatchId);
   }
-  return state;
+  return base;
 }
 
 function readState() {
   try {
-    const raw = localStorage.getItem(STORAGE_KEY);
+    const raw = localStorage.getItem(STORAGE_KEY) || localStorage.getItem(LEGACY_STORAGE_KEY);
     if (!raw) return createDefaultState();
     const parsed = JSON.parse(raw);
-    const base = createDefaultState();
+    const fallback = createDefaultState();
     const merged = {
-      ...base,
+      ...fallback,
       ...parsed,
-      teamName: (parsed && parsed.teamName) ? parsed.teamName : base.teamName,
-      schedule: Array.isArray(parsed.schedule) && parsed.schedule.length ? parsed.schedule : base.schedule,
-      selectedMatchId: (parsed && parsed.selectedMatchId) ? parsed.selectedMatchId : base.selectedMatchId,
-      history: Array.isArray(parsed.history) ? parsed.history : [],
-      matchStates: parsed && parsed.matchStates ? parsed.matchStates : base.matchStates,
+      teamName: parsed && parsed.teamName ? parsed.teamName : fallback.teamName,
+      schedule: Array.isArray(parsed && parsed.schedule) && parsed.schedule.length ? parsed.schedule : fallback.schedule,
+      selectedMatchId: parsed && parsed.selectedMatchId ? parsed.selectedMatchId : fallback.selectedMatchId,
+      history: Array.isArray(parsed && parsed.history) ? parsed.history : [],
+      matchStates: parsed && parsed.matchStates ? parsed.matchStates : fallback.matchStates,
       appVersion: parsed && parsed.appVersion ? parsed.appVersion : '1.0.0'
     };
 
@@ -80,9 +80,11 @@ function readState() {
         merged.matchStates[match.id] = buildMatchState(match.id);
       }
     });
+
     if (!merged.selectedMatchId && merged.schedule.length) {
       merged.selectedMatchId = merged.schedule[0].id;
     }
+
     return merged;
   } catch (error) {
     console.warn('Laden uit localStorage mislukte, standaardwaarden worden gebruikt:', error);
@@ -101,6 +103,7 @@ const ui = {
   scoreAway: document.getElementById('scoreAway'),
   periodLabel: document.getElementById('periodLabel'),
   timeLabel: document.getElementById('timeLabel'),
+  teamHomeName: document.getElementById('teamHomeName'),
   teamAwayName: document.getElementById('teamAwayName'),
   eventTypeInput: document.getElementById('eventTypeInput'),
   eventTeamInput: document.getElementById('eventTeamInput'),
@@ -136,15 +139,22 @@ function saveState() {
 function showToast(message) {
   ui.toast.textContent = message;
   ui.toast.classList.add('visible');
-  clearTimeout(showToast.t);
-  showToast.t = setTimeout(function () {
+  clearTimeout(showToast.timer);
+  showToast.timer = setTimeout(function () {
     ui.toast.classList.remove('visible');
   }, 1800);
 }
 
+function formatClock(seconds) {
+  const totalSeconds = Math.max(0, Number(seconds) || 0);
+  const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
+  const secs = String(totalSeconds % 60).padStart(2, '0');
+  return minutes + ':' + secs;
+}
+
 function getSelectedMatch() {
-  if (!state.selectedMatchId) {
-    state.selectedMatchId = state.schedule[0] ? state.schedule[0].id : null;
+  if (!state.selectedMatchId && state.schedule.length) {
+    state.selectedMatchId = state.schedule[0].id;
   }
   return state.schedule.find(function (match) {
     return match.id === state.selectedMatchId;
@@ -152,35 +162,27 @@ function getSelectedMatch() {
 }
 
 function getSelectedLiveState() {
-  const selectedMatchId = getSelectedMatch() ? getSelectedMatch().id : null;
-  if (!selectedMatchId) return null;
-  if (!state.matchStates[selectedMatchId]) {
-    state.matchStates[selectedMatchId] = buildMatchState(selectedMatchId);
+  const selectedMatch = getSelectedMatch();
+  if (!selectedMatch) return null;
+  if (!state.matchStates[selectedMatch.id]) {
+    state.matchStates[selectedMatch.id] = buildMatchState(selectedMatch.id);
   }
-  return state.matchStates[selectedMatchId];
+  return state.matchStates[selectedMatch.id];
 }
 
-function formatClock(seconds) {
-  const minutes = Math.floor(seconds / 60);
-  const secs = seconds % 60;
-  return String(minutes).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
-}
-
-function getOpponentLabel(match) {
-  if (!match) return 'Tegenstander';
-  return match.opponent || 'Tegenstander';
+function getTeamName() {
+  return (state.teamName || DEFAULT_TEAM_NAME).trim() || DEFAULT_TEAM_NAME;
 }
 
 function renderSchedule() {
-  const matches = state.schedule || [];
-  ui.scheduleList.innerHTML = matches.map(function (match) {
-    const status = match.status || 'In planning';
+  const schedule = state.schedule || [];
+  ui.scheduleList.innerHTML = schedule.map(function (match) {
     const isSelected = match.id === state.selectedMatchId;
     return `
       <div class="schedule-item ${isSelected ? 'selected' : ''}">
         <div class="schedule-top">
           <div class="schedule-date">${match.date}</div>
-          <span class="schedule-status">${status}</span>
+          <span class="schedule-status">${match.status || 'In planning'}</span>
         </div>
         <div class="schedule-meta">
           <div><strong>${match.opponent}</strong></div>
@@ -204,18 +206,21 @@ function renderSchedule() {
 
   ui.scheduleList.querySelectorAll('[data-action="edit-match"]').forEach(function (button) {
     button.addEventListener('click', function () {
-      const id = button.getAttribute('data-match-id');
-      const match = state.schedule.find(function (item) { return item.id === id; });
+      const match = state.schedule.find(function (item) {
+        return item.id === button.getAttribute('data-match-id');
+      });
       if (!match) return;
-      const newDate = prompt('Datum van de wedstrijd:', match.date || '');
+
+      const newDate = prompt('Datum voor de wedstrijd:', match.date || '');
       if (newDate === null) return;
       const newOpponent = prompt('Tegenstander:', match.opponent || '');
       if (newOpponent === null) return;
       const newVenue = prompt('Locatie / thuis-uit:', match.venue || 'Thuis');
       if (newVenue === null) return;
-      match.date = newDate.trim() || match.date;
-      match.opponent = newOpponent.trim() || match.opponent;
-      match.venue = newVenue.trim() || match.venue;
+
+      match.date = (newDate || match.date).trim();
+      match.opponent = (newOpponent || match.opponent).trim();
+      match.venue = (newVenue || match.venue).trim();
       saveState();
       renderAll();
     });
@@ -230,19 +235,19 @@ function renderLive() {
     return;
   }
 
-  const opponentName = getOpponentLabel(selectedMatch);
-  const teamAwayName = opponentName || 'Tegenstander';
-  ui.teamAwayName.textContent = teamAwayName;
-  ui.liveMatchLabel.textContent = selectedMatch.date + ' • ' + selectedMatch.venue + ' • ' + opponentName;
+  const awayName = selectedMatch.opponent || 'Tegenstander';
+  ui.teamHomeName.textContent = getTeamName();
+  ui.teamAwayName.textContent = awayName;
+  ui.liveMatchLabel.textContent = selectedMatch.date + ' • ' + selectedMatch.venue + ' • ' + awayName;
   ui.scoreHome.textContent = String(liveState.scoreA || 0);
   ui.scoreAway.textContent = String(liveState.scoreB || 0);
   ui.periodLabel.textContent = 'Periode ' + (liveState.period || 1);
   ui.timeLabel.textContent = formatClock(liveState.clockSeconds || 15 * 60);
 
   const log = (liveState.log || []).slice().reverse();
-  ui.eventLog.innerHTML = log.length ? log.map(function (item) {
-    return '<div class="event-item">' + item.label + '</div>';
-  }).join('') : '<div class="event-item">Nog geen gebeurtenissen geregistreerd.</div>';
+  ui.eventLog.innerHTML = log.length
+    ? log.map(function (item) { return '<div class="event-item">' + item.label + '</div>'; }).join('')
+    : '<div class="event-item">Nog geen gebeurtenissen geregistreerd.</div>';
 }
 
 function startClock() {
@@ -257,8 +262,8 @@ function startClock() {
       live.running = false;
       clearInterval(live.timerId);
       live.timerId = null;
-      saveState();
       renderLive();
+      saveState();
       return;
     }
     live.clockSeconds -= 1;
@@ -297,44 +302,13 @@ function nextPeriod() {
   saveState();
 }
 
-function getPlayerStats() {
-  const live = getSelectedLiveState();
-  const stats = {};
-  const addPlayer = function (name, team, type, minutes) {
-    const cleanName = (name || 'Onbekend').trim() || 'Onbekend';
-    if (!stats[cleanName]) {
-      stats[cleanName] = { team: team || 'Tilburg', goals: 0, assists: 0, shots: 0, penaltyMinutes: 0, games: 0 };
-    }
-    if (type === 'goal') stats[cleanName].goals += 1;
-    if (type === 'assist') stats[cleanName].assists += 1;
-    if (type === 'shot') stats[cleanName].shots += 1;
-    if (type === 'penalty') stats[cleanName].penaltyMinutes += Number(minutes || 0);
-    stats[cleanName].team = team || stats[cleanName].team;
-  };
-
-  if (live && live.playerStats) {
-    Object.keys(live.playerStats).forEach(function (name) {
-      const values = live.playerStats[name];
-      addPlayer(name, values.team, 'goal', 0);
-      addPlayer(name, values.team, 'assist', 0);
-      addPlayer(name, values.team, 'shot', 0);
-      addPlayer(name, values.team, 'penalty', values.penaltyMinutes || 0);
-    });
-  }
-
-  (live && live.log || []).forEach(function (entry) {
-    if (!entry || !entry.player) return;
-    addPlayer(entry.player, entry.team === 'A' ? 'Tilburg' : 'Tegenstander', entry.type, entry.minutes || 0);
-  });
-  return stats;
-}
-
 function setPlayerStat(player, team, type, minutes) {
   const live = getSelectedLiveState();
   if (!live) return;
   const safePlayer = (player || 'Onbekend').trim() || 'Onbekend';
   const current = live.playerStats[safePlayer] || { team: team || 'Tilburg', goals: 0, assists: 0, shots: 0, penaltyMinutes: 0 };
   current.team = team || current.team;
+
   if (type === 'goal') current.goals += 1;
   if (type === 'assist') current.assists += 1;
   if (type === 'shot') current.shots += 1;
@@ -349,23 +323,32 @@ function recordEvent() {
     return;
   }
 
-  const type = ui.eventTypeInput.value;
-  const team = ui.eventTeamInput.value;
+  const eventType = ui.eventTypeInput.value;
+  const teamValue = ui.eventTeamInput.value;
   const playerName = (ui.eventPlayerInput.value || 'Onbekend').trim() || 'Onbekend';
   const minutes = Number(ui.eventMinutesInput.value || 0);
 
-  if (type === 'goal') {
-    if (team === 'A') live.scoreA += 1; else live.scoreB += 1;
+  if (eventType === 'goal') {
+    if (teamValue === 'A') live.scoreA += 1; else live.scoreB += 1;
   }
 
-  const label = `${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • ${team === 'A' ? 'Tilburg' : 'Tegenstander'} • ${playerName} • ${type === 'goal' ? 'Doelpunt' : type === 'assist' ? 'Assist' : type === 'shot' ? 'Schot' : 'Strafminuten (' + minutes + ' min)'}`;
+  const timeStamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  const teamLabel = teamValue === 'A' ? getTeamName() : (getSelectedMatch() ? getSelectedMatch().opponent : 'Tegenstander');
+  const typeLabel = eventType === 'goal' ? 'Doelpunt' : eventType === 'assist' ? 'Assist' : eventType === 'shot' ? 'Schot' : 'Strafminuten (' + minutes + ' min)';
 
-  const entry = { type: type, team: team, player: playerName, minutes: minutes, label: label };
+  const entry = {
+    type: eventType,
+    team: teamValue,
+    player: playerName,
+    minutes: minutes,
+    label: timeStamp + ' • ' + teamLabel + ' • ' + playerName + ' • ' + typeLabel
+  };
+
   live.log.push(entry);
-  setPlayerStat(playerName, team === 'A' ? 'Tilburg' : 'Tegenstander', type, minutes);
-
+  setPlayerStat(playerName, teamLabel, eventType, minutes);
   ui.eventPlayerInput.value = '';
   ui.eventMinutesInput.value = '2';
+
   renderLive();
   renderStats();
   renderRace();
@@ -383,18 +366,20 @@ function undoLastEvent() {
   if (!last) return;
 
   if (last.type === 'goal') {
-    if (last.team === 'A') live.scoreA = Math.max(0, live.scoreA - 1); else live.scoreB = Math.max(0, live.scoreB - 1);
+    if (last.team === 'A') live.scoreA = Math.max(0, live.scoreA - 1);
+    else live.scoreB = Math.max(0, live.scoreB - 1);
   }
 
-  const playerName = last.player || 'Onbekend';
-  const stats = live.playerStats[playerName];
-  if (stats) {
-    if (last.type === 'goal') stats.goals = Math.max(0, stats.goals - 1);
-    if (last.type === 'assist') stats.assists = Math.max(0, stats.assists - 1);
-    if (last.type === 'shot') stats.shots = Math.max(0, stats.shots - 1);
-    if (last.type === 'penalty') stats.penaltyMinutes = Math.max(0, stats.penaltyMinutes - Number(last.minutes || 0));
-    if (stats.goals === 0 && stats.assists === 0 && stats.shots === 0 && stats.penaltyMinutes === 0) {
-      delete live.playerStats[playerName];
+  if (last.player) {
+    const stats = live.playerStats[last.player];
+    if (stats) {
+      if (last.type === 'goal') stats.goals = Math.max(0, stats.goals - 1);
+      if (last.type === 'assist') stats.assists = Math.max(0, stats.assists - 1);
+      if (last.type === 'shot') stats.shots = Math.max(0, stats.shots - 1);
+      if (last.type === 'penalty') stats.penaltyMinutes = Math.max(0, stats.penaltyMinutes - Number(last.minutes || 0));
+      if (!stats.goals && !stats.assists && !stats.shots && !stats.penaltyMinutes) {
+        delete live.playerStats[last.player];
+      }
     }
   }
 
@@ -405,9 +390,8 @@ function undoLastEvent() {
 }
 
 function getSummaryStats() {
+  const openMatch = getSelectedLiveState();
   const history = state.history || [];
-  const live = getSelectedLiveState();
-  let played = history.length;
   let wins = 0;
   let losses = 0;
   let draws = 0;
@@ -415,7 +399,6 @@ function getSummaryStats() {
   let goalsAgainst = 0;
 
   history.forEach(function (match) {
-    played += 0;
     goalsFor += Number(match.scoreA || 0);
     goalsAgainst += Number(match.scoreB || 0);
     if (Number(match.scoreA) > Number(match.scoreB)) wins += 1;
@@ -423,12 +406,54 @@ function getSummaryStats() {
     else draws += 1;
   });
 
-  if (live) {
-    goalsFor += Number(live.scoreA || 0);
-    goalsAgainst += Number(live.scoreB || 0);
+  if (openMatch) {
+    goalsFor += Number(openMatch.scoreA || 0);
+    goalsAgainst += Number(openMatch.scoreB || 0);
   }
 
-  return { played, wins, losses, draws, goalsFor, goalsAgainst };
+  return {
+    played: history.length,
+    wins: wins,
+    losses: losses,
+    draws: draws,
+    goalsFor: goalsFor,
+    goalsAgainst: goalsAgainst
+  };
+}
+
+function buildPlayerTableData() {
+  const map = {};
+
+  function add(name, stat) {
+    const clean = (name || 'Onbekend').trim() || 'Onbekend';
+    if (!map[clean]) {
+      map[clean] = { goals: 0, assists: 0, shots: 0, penaltyMinutes: 0 };
+    }
+    map[clean].goals += Number(stat.goals || 0);
+    map[clean].assists += Number(stat.assists || 0);
+    map[clean].shots += Number(stat.shots || 0);
+    map[clean].penaltyMinutes += Number(stat.penaltyMinutes || 0);
+  }
+
+  (state.history || []).forEach(function (match) {
+    if (!match.playerStats) return;
+    Object.keys(match.playerStats).forEach(function (player) {
+      add(player, match.playerStats[player]);
+    });
+  });
+
+  const live = getSelectedLiveState();
+  if (live && live.playerStats) {
+    Object.keys(live.playerStats).forEach(function (player) {
+      add(player, live.playerStats[player]);
+    });
+  }
+
+  return Object.keys(map).map(function (player) {
+    return { player: player, ...map[player] };
+  }).sort(function (a, b) {
+    return (b.goals + b.assists) - (a.goals + a.assists);
+  });
 }
 
 function renderStats() {
@@ -436,52 +461,11 @@ function renderStats() {
   ui.statsSummary.innerHTML = `
     <div class="stat-card"><div class="value">${summary.played}</div><div class="label">Gespeeld</div></div>
     <div class="stat-card"><div class="value">${summary.wins}</div><div class="label">Winst</div></div>
-    <div class="stat-card"><div class="value">${summary.goalsFor}</div><div class="label">Doelpunten voor</div></div>
-    <div class="stat-card"><div class="value">${summary.goalsAgainst}</div><div class="label">Doelpunten tegen</div></div>
+    <div class="stat-card"><div class="value">${summary.goalsFor}</div><div class="label">Voor</div></div>
+    <div class="stat-card"><div class="value">${summary.goalsAgainst}</div><div class="label">Tegen</div></div>
   `;
 
-  const allPlayerData = {};
-
-  function addPlayerData(name, entry) {
-    if (!entry || !name) return;
-    const clean = name.trim() || 'Onbekend';
-    if (!allPlayerData[clean]) {
-      allPlayerData[clean] = { goals: 0, assists: 0, shots: 0, penaltyMinutes: 0, matches: 0 };
-    }
-    allPlayerData[clean].goals += Number(entry.goals || 0);
-    allPlayerData[clean].assists += Number(entry.assists || 0);
-    allPlayerData[clean].shots += Number(entry.shots || 0);
-    allPlayerData[clean].penaltyMinutes += Number(entry.penaltyMinutes || 0);
-    allPlayerData[clean].matches += 1;
-  }
-
-  (state.history || []).forEach(function (match) {
-    if (!match.playerStats) return;
-    Object.keys(match.playerStats).forEach(function (name) {
-      addPlayerData(name, match.playerStats[name]);
-    });
-  });
-
-  const live = getSelectedLiveState();
-  if (live && live.playerStats) {
-    Object.keys(live.playerStats).forEach(function (name) {
-      addPlayerData(name, live.playerStats[name]);
-    });
-  }
-
-  const rows = Object.keys(allPlayerData).sort().map(function (player) {
-    const value = allPlayerData[player];
-    return `
-      <div class="table-row">
-        <div>${player}</div>
-        <div>${value.goals}</div>
-        <div>${value.assists}</div>
-        <div>${value.shots}</div>
-        <div>${value.penaltyMinutes}</div>
-      </div>
-    `;
-  });
-
+  const rows = buildPlayerTableData();
   if (!rows.length) {
     ui.statsTable.innerHTML = '<div class="table-row"><div>Geen statistieken beschikbaar.</div></div>';
     return;
@@ -493,63 +477,39 @@ function renderStats() {
       <div>Goals</div>
       <div>Assists</div>
       <div>Schoten</div>
-      <div>Strafmin</div>
+      <div>Straf</div>
     </div>
-    ${rows.join('')}
+    ${rows.map(function (item) {
+      return `
+        <div class="table-row">
+          <div>${item.player}</div>
+          <div>${item.goals}</div>
+          <div>${item.assists}</div>
+          <div>${item.shots}</div>
+          <div>${item.penaltyMinutes}</div>
+        </div>
+      `;
+    }).join('')}
   `;
 }
 
-function getRaceData() {
-  const all = {};
-
-  function addGoalKey(name, score) {
-    if (!name) return;
-    const clean = name.trim() || 'Onbekend';
-    all[clean] = (all[clean] || 0) + Number(score || 0);
-  }
-
-  (state.history || []).forEach(function (match) {
-    if (!match.playerStats) return;
-    Object.keys(match.playerStats).forEach(function (name) {
-      const stats = match.playerStats[name];
-      addGoalKey(name, stats.goals || 0);
-    });
-  });
-
-  const live = getSelectedLiveState();
-  if (live && live.playerStats) {
-    Object.keys(live.playerStats).forEach(function (name) {
-      const stats = live.playerStats[name];
-      addGoalKey(name, stats.goals || 0);
-    });
-  }
-
-  const entries = Object.keys(all).map(function (name) {
-    return { player: name, goals: all[name] };
-  }).sort(function (a, b) { return b.goals - a.goals; });
-
-  const jay = entries.find(function (item) {
-    return item.player.toLowerCase().indexOf('jay') !== -1 || item.player.indexOf('#45') !== -1;
-  }) || { player: 'Jay-Jay (#45)', goals: 0 };
-
-  const list = entries.filter(function (item) {
-    return item.player !== jay.player;
-  });
-  list.unshift(jay);
-  return list.slice(0, 6);
-}
-
 function renderRace() {
-  const data = getRaceData();
-  const max = Math.max(TARGET_SCORE, ...data.map(function (item) { return item.goals || 0; }));
+  const data = buildRaceData();
+  if (!data.length) {
+    ui.racePanel.innerHTML = '<div class="race-item">Nog geen doelpunten geregistreerd.</div>';
+    return;
+  }
 
+  const max = Math.max(TARGET_SCORE, ...data.map(function (item) { return Number(item.goals || 0); }));
   ui.racePanel.innerHTML = data.map(function (item, index) {
-    const pct = Math.max(6, Math.min(100, ((Number(item.goals) || 0) / max) * 100));
-    const status = (Number(item.goals) || 0) >= TARGET_SCORE ? 'Doel bereikt!' : (Number(item.goals) || 0) + '/' + TARGET_SCORE;
+    const goals = Number(item.goals || 0);
+    const pct = Math.max(6, Math.min(100, (goals / max) * 100));
+    const status = goals >= TARGET_SCORE ? 'Doel bereikt!' : goals + '/' + TARGET_SCORE;
+    const label = item.player && item.player.toLowerCase().indexOf('jay') !== -1 ? 'Jay-Jay (#45)' : item.player;
     return `
       <div class="race-item">
         <div class="race-top">
-          <strong>#${index + 1} ${item.player}</strong>
+          <strong>#${index + 1} ${label}</strong>
           <span>${status}</span>
         </div>
         <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
@@ -557,17 +517,53 @@ function renderRace() {
     `;
   }).join('');
 
-  const jayGoal = data.find(function (item) { return item.player.indexOf('Jay-Jay') !== -1 || item.player.indexOf('#45') !== -1; });
+  const jayGoal = data.find(function (item) {
+    return item.player && (item.player.toLowerCase().indexOf('jay') !== -1 || item.player.indexOf('#45') !== -1);
+  });
   if (jayGoal && Number(jayGoal.goals || 0) >= TARGET_SCORE) {
     showToast('Jay-Jay heeft de 10 doelpunten bereikt!');
   }
 }
 
+function buildRaceData() {
+  const map = {};
+
+  function addPlayerData(player, goals) {
+    const clean = (player || 'Onbekend').trim() || 'Onbekend';
+    map[clean] = (map[clean] || 0) + Number(goals || 0);
+  }
+
+  (state.history || []).forEach(function (match) {
+    if (!match.playerStats) return;
+    Object.keys(match.playerStats).forEach(function (player) {
+      addPlayerData(player, match.playerStats[player].goals || 0);
+    });
+  });
+
+  const live = getSelectedLiveState();
+  if (live && live.playerStats) {
+    Object.keys(live.playerStats).forEach(function (player) {
+      addPlayerData(player, live.playerStats[player].goals || 0);
+    });
+  }
+
+  const list = Object.keys(map).map(function (name) {
+    return { player: name, goals: map[name] };
+  }).sort(function (a, b) { return b.goals - a.goals; });
+
+  const jayMatch = list.find(function (item) {
+    return item.player.toLowerCase().indexOf('jay') !== -1 || item.player.indexOf('#45') !== -1;
+  });
+  if (jayMatch) {
+    return [jayMatch].concat(list.filter(function (item) { return item.player !== jayMatch.player; })).slice(0, 5);
+  }
+  return list.slice(0, 5);
+}
+
 function renderHistory() {
   const history = state.history || [];
-
   if (!history.length) {
-    ui.historyList.innerHTML = '<div class="history-item"><h3>Geen afgeronde wedstrijden</h3><p>De volledige wedstrijdhistorie verschijnt hier.</p></div>';
+    ui.historyList.innerHTML = '<div class="history-item"><h3>Geen afgeronde wedstrijden</h3><p>Er zijn nog geen wedstrijdresultaten opgeslagen.</p></div>';
     return;
   }
 
@@ -576,7 +572,7 @@ function renderHistory() {
       <div class="history-item">
         <h3>${match.date}</h3>
         <p><strong>${match.opponent}</strong> • ${match.venue}</p>
-        <p>Eindstand: ${match.scoreA}-${match.scoreB}</p>
+        <p>Eindstand: ${match.scoreA} - ${match.scoreB}</p>
         <p>${match.summary || 'Wedstrijd afgerond'}</p>
       </div>
     `;
@@ -600,22 +596,18 @@ function importData(file) {
   reader.onload = function () {
     try {
       const parsed = JSON.parse(reader.result);
-      const repaired = readState();
-      const next = {
-        ...repaired,
+      const merged = {
+        ...createDefaultState(),
         ...parsed,
-        teamName: parsed.teamName || repaired.teamName,
-        schedule: Array.isArray(parsed.schedule) && parsed.schedule.length ? parsed.schedule : repaired.schedule,
-        history: Array.isArray(parsed.history) ? parsed.history : repaired.history,
-        selectedMatchId: parsed.selectedMatchId || repaired.selectedMatchId,
-        matchStates: parsed.matchStates || repaired.matchStates,
-        appVersion: parsed.appVersion || repaired.appVersion
+        schedule: Array.isArray(parsed.schedule) && parsed.schedule.length ? parsed.schedule : createDefaultState().schedule,
+        history: Array.isArray(parsed.history) ? parsed.history : [],
+        matchStates: parsed.matchStates || createDefaultState().matchStates,
+        teamName: parsed.teamName || DEFAULT_TEAM_NAME
       };
-
-      state = next;
+      state = merged;
       saveState();
       renderAll();
-      showToast('JSON is geïmporteerd.');
+      showToast('JSON geïmporteerd.');
     } catch (error) {
       console.error('Import mislukt:', error);
       showToast('Geldige JSON verwacht.');
@@ -625,21 +617,20 @@ function importData(file) {
 }
 
 function clearAllData() {
-  const confirmed = window.confirm('Weet je zeker dat je alle trackergegevens wilt wissen?');
-  if (!confirmed) return;
+  if (!window.confirm('Weet je zeker dat je alle trackergegevens wilt wissen?')) return;
   localStorage.removeItem(STORAGE_KEY);
+  localStorage.removeItem(LEGACY_STORAGE_KEY);
   state = createDefaultState();
   renderAll();
-  showToast('Gegevens zijn gewist.');
+  showToast('Gegevens gewist.');
 }
 
 function saveTeamName() {
-  const name = (ui.teamNameInput.value || '').trim();
-  state.teamName = name || DEFAULT_TEAM_NAME;
-  ui.teamNameInput.value = state.teamName;
+  const value = (ui.teamNameInput.value || '').trim();
+  state.teamName = value || DEFAULT_TEAM_NAME;
   saveState();
   renderAll();
-  showToast('Teamnaam is opgeslagen.');
+  showToast('Teamnaam opgeslagen.');
 }
 
 function addScheduleMatch() {
@@ -651,7 +642,13 @@ function addScheduleMatch() {
   if (venue === null) return;
 
   const id = 'day-' + String(Date.now()).slice(-6);
-  const newMatch = { id: id, date: (date || 'Onbekend').trim(), opponent: (opponent || 'Tegenstander').trim(), venue: (venue || 'Thuis').trim(), status: 'In planning' };
+  const newMatch = {
+    id: id,
+    date: (date || 'Onbekend').trim(),
+    opponent: (opponent || 'Tegenstander').trim(),
+    venue: (venue || 'Thuis').trim(),
+    status: 'In planning'
+  };
   state.schedule.push(newMatch);
   state.matchStates[id] = buildMatchState(id);
   state.selectedMatchId = id;
@@ -661,30 +658,26 @@ function addScheduleMatch() {
 }
 
 function endCurrentMatch() {
-  const selectedMatch = getSelectedMatch();
+  const match = getSelectedMatch();
   const live = getSelectedLiveState();
-  if (!selectedMatch || !live) return;
+  if (!match || !live) return;
 
-  const summary = `Eindstand ${live.scoreA}-${live.scoreB}`;
   state.history.push({
-    id: selectedMatch.id,
-    date: selectedMatch.date,
-    opponent: selectedMatch.opponent,
-    venue: selectedMatch.venue,
+    id: match.id,
+    date: match.date,
+    opponent: match.opponent,
+    venue: match.venue,
     scoreA: live.scoreA,
     scoreB: live.scoreB,
-    summary: summary,
+    summary: 'Eindstand ' + live.scoreA + '-' + live.scoreB,
     playerStats: JSON.parse(JSON.stringify(live.playerStats || {}))
   });
 
-  selectedMatch.status = 'Afgerond';
-  const newState = buildMatchState(selectedMatch.id);
-  newState.scoreA = 0;
-  newState.scoreB = 0;
-  state.matchStates[selectedMatch.id] = newState;
+  match.status = 'Afgerond';
+  state.matchStates[match.id] = buildMatchState(match.id);
   saveState();
   renderAll();
-  showToast('Wedstrijd afgerond en opgeslagen.');
+  showToast('Wedstrijd afgerond.');
 }
 
 function setActiveView(viewName) {
@@ -727,13 +720,12 @@ function renderAll() {
   renderStats();
   renderRace();
   renderHistory();
-  ui.teamNameInput.value = state.teamName || DEFAULT_TEAM_NAME;
+  ui.teamNameInput.value = getTeamName();
   ui.versionLabel.textContent = state.appVersion || '1.0.0';
 }
 
 bindEvents();
 renderAll();
-
 window.addEventListener('beforeunload', function () {
   saveState();
 });
