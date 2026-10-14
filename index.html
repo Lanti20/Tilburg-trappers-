@@ -1,1 +1,1430 @@
+<!doctype html>
+<html lang="nl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#06122b">
+<meta name="color-scheme" content="dark light">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>U11 Hockey Tracker</title>
+<style>
+:root{
+  --bg:#06122b;--card:#0e2247;--card2:#0a1a38;--line:#27457a;
+  --ink:#f4f7fc;--mut:#9fb2d3;--gold:#f6c32b;--blue:#1a56b8;
+  --grn:#58dfa1;--red:#ff6b7a;--header1:#0b2c6b;--header2:#123f8f;
+  --shadow:0 4px 14px #0004;
+}
+:root[data-theme="light"]{
+  --bg:#eef3fb;--card:#ffffff;--card2:#f5f8fc;--line:#c9d6e8;
+  --ink:#0b1a35;--mut:#5b6b85;--gold:#d79d16;--blue:#1a56b8;
+  --grn:#1f9d63;--red:#c9374a;--header1:#1a56b8;--header2:#0b2c6b;
+  --shadow:0 4px 14px #0001;
+}
+*{box-sizing:border-box}
+html{background:var(--bg)}
+body{
+  margin:0;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+  background:radial-gradient(900px 420px at 50% -80px,#15397f,var(--bg) 62%) fixed,var(--bg);
+  color:var(--ink);
+  font:15px/1.4 system-ui,-apple-system,"Segoe UI",sans-serif;
+  min-height:100vh;
+}
+:root[data-theme="light"] body{background:var(--bg)}
+button,select,input,textarea{font:inherit;color:var(--ink)}
+button{border:0;border-radius:12px;padding:12px;font-weight:800;background:#16336f;cursor:pointer;touch-action:manipulation;transition:transform .1s}
+:root[data-theme="light"] button{background:#dbe6f5}
+button:active{transform:scale(.97)}
+button.g{background:var(--gold);color:#0b2c6b}
+button.d{background:#4a1b27;color:#ffb3bb}
+button.o{background:transparent;border:1px solid var(--line)}
+:root[data-theme="light"] button.d{background:#f8d7dc;color:#8b1e2c}
+select,input,textarea{width:100%;background:var(--card2);border:1px solid var(--line);border-radius:10px;padding:11px;min-width:0}
+label{display:block;font-size:12px;font-weight:700;color:var(--mut);margin:0 0 4px}
+header{padding:12px 14px 10px;background:linear-gradient(160deg,var(--header1),var(--header2));border-bottom:4px solid var(--gold);border-radius:0 0 22px 22px}
+h1{margin:0;font:italic 900 28px/1 "Barlow Condensed","Arial Narrow",Impact,sans-serif;text-transform:uppercase;letter-spacing:.02em;color:#fff}
+h2{margin:0;font:italic 900 21px/1.1 "Barlow Condensed","Arial Narrow",Impact,sans-serif;text-transform:uppercase}
+.sub{color:#c3d3e6;font-size:12px;margin:3px 0 10px}
+.hs{display:grid;grid-template-columns:1fr 1fr;gap:8px}.hs select{border:2px solid var(--gold);font-weight:700;padding:9px}
+main{max-width:640px;margin:auto;padding:14px 13px 100px}
+.v{display:none}.v.on{display:block}
+.c{background:linear-gradient(160deg,var(--card),var(--card2));border:1px solid var(--line);border-radius:18px;padding:14px;margin-bottom:12px;box-shadow:var(--shadow)}
+.hd{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-bottom:10px}
+.m{color:var(--mut);font-size:12px}
+.row{display:flex;gap:8px}.row>*{flex:1;min-width:0}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sb{display:grid;grid-template-columns:1fr auto 1fr;gap:6px;text-align:center;align-items:center;margin:8px 0 12px}
+.tn{font:italic 800 13px "Barlow Condensed","Arial Narrow",sans-serif;text-transform:uppercase;color:var(--mut)}
+.sc{font:italic 900 80px/.95 "Barlow Condensed","Arial Narrow",Impact,sans-serif}.sc.h{color:var(--gold)}
+.ck{font:900 44px/1 "Barlow Condensed","Arial Narrow",Impact,sans-serif;font-variant-numeric:tabular-nums;color:var(--mut)}
+.ck.r{color:var(--grn)}.ck.l{color:var(--red)}
+.sw{display:none;background:var(--gold);color:#0b2c6b;border-radius:12px;padding:10px;text-align:center;font:italic 900 24px "Barlow Condensed",Impact,sans-serif;margin-bottom:10px}.sw.on{display:block}
+.bt{display:grid;grid-template-columns:1fr 1fr;gap:8px}.bt button{min-height:50px}
+.bt small{display:block;font-weight:600;opacity:.8;font-size:11px}
+.ev{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:9px 0;border-bottom:1px solid var(--line)}.ev:last-child{border:0}
+.ev button{padding:5px 10px}
+.sg{display:grid;grid-template-columns:repeat(2,1fr);gap:8px}
+.st{background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:10px}
+.st b{display:block;font:900 30px/1 "Barlow Condensed",Impact,sans-serif;color:var(--gold)}.st span{font-size:11px;color:var(--mut)}
+.card{background:linear-gradient(135deg,#f6c32b,#d79d16);color:#0b2c6b;border-radius:20px;padding:14px;margin-bottom:12px;box-shadow:var(--shadow)}
+.card .nm{font:italic 900 30px/1 "Barlow Condensed",Impact,sans-serif;text-transform:uppercase}
+.card .n{font:italic 900 56px/.9 "Barlow Condensed",Impact,sans-serif}
+.card .fg{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;border-top:2px solid #0b2c6b44;margin-top:10px;padding-top:8px;text-align:center}
+.card .fg b{display:block;font:900 26px/1 "Barlow Condensed",Impact,sans-serif}.card .fg span{font-size:10px;font-weight:800;text-transform:uppercase}
+.next{background:linear-gradient(145deg,#0b2c6b,#1a56b8);border-bottom:4px solid var(--gold);border-radius:16px;padding:14px;margin-bottom:12px;color:#fff}
+.next .t{font:italic 900 26px/1.1 "Barlow Condensed",Impact,sans-serif;margin:4px 0}
+a{color:var(--gold)}
+details.sd>summary{list-style:none;display:flex;justify-content:space-between;align-items:center;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;margin-bottom:6px;color:var(--ink);font-weight:800}
+details.sd>summary::-webkit-details-marker{display:none}
+details.sd>summary::after{content:'▾';color:var(--gold);margin-left:10px;transition:transform .2s}
+details.sd[open]>summary::after{transform:rotate(180deg)}
+details.sd>summary .m{margin-left:auto}
+details.sd+details.sd{margin-top:8px}
+.tb{display:block;width:100%;border-radius:16px;margin-bottom:12px;border-bottom:4px solid var(--gold)}
+.av{width:56px;height:56px;border-radius:50%;object-fit:cover;object-position:top;border:2px solid var(--gold);flex:none;cursor:pointer}
+.ph{width:84px;height:84px;border-radius:50%;object-fit:cover;object-position:top;border:3px solid #0b2c6b;flex:none;cursor:pointer}
+.av-wrap{position:relative;display:inline-flex;cursor:pointer;flex:none}
+.av-wrap::after{content:'📷';position:absolute;right:-2px;bottom:-2px;background:#0b2c6b;color:#fff;font-size:11px;width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;border:2px solid var(--gold)}
+.day{border-top:1px solid var(--line);padding:10px 0}
+.day .row{margin-top:8px}.day button{font-size:13px;padding:10px 8px}.day button.ok{background:#12433a;color:#6ff0b4}
+details summary{cursor:pointer;font-weight:800;padding:8px 0;color:var(--mut)}
+.rc{display:flex;gap:12px;align-items:center;background:var(--card2);border:1px solid var(--line);border-radius:16px;padding:12px;margin-bottom:10px}
+.rn{font:italic 900 40px/1 "Barlow Condensed",Impact,sans-serif;color:var(--gold);min-width:56px}
+.fx{flex:1;min-width:0}.bar{height:14px;border-radius:99px;background:#16336f;overflow:hidden;margin:7px 0 4px}
+:root[data-theme="light"] .bar{background:#dbe6f5}
+.bar i{display:block;height:100%;background:linear-gradient(90deg,var(--blue),var(--gold));border-radius:99px;transition:width .6s}
+.big{font:900 34px/1 "Barlow Condensed",Impact,sans-serif;color:var(--gold)}.big small{font-size:14px;color:var(--mut)}
+.win{background:var(--gold);color:#0b2c6b;border-radius:16px;padding:16px;text-align:center;font:italic 900 26px/1.1 "Barlow Condensed",Impact,sans-serif;text-transform:uppercase;margin-bottom:12px}
+.empty{color:var(--mut);text-align:center;padding:18px 4px;font-size:13px}
+nav{position:fixed;left:0;right:0;bottom:0;z-index:20;display:grid;grid-template-columns:repeat(6,1fr);gap:2px;padding:6px 4px calc(6px + env(safe-area-inset-bottom,0px));background:color-mix(in srgb, var(--bg) 96%, transparent);backdrop-filter:blur(8px);border-top:1px solid var(--line)}
+nav button{background:none;color:var(--mut);font-size:10px;padding:6px 0;border-radius:10px;display:flex;flex-direction:column;align-items:center;gap:2px}
+nav button span{font-size:18px}
+nav button.on{background:var(--gold);color:#06122b}
+#toast{position:fixed;left:50%;bottom:calc(76px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--gold);color:#06122b;padding:10px 16px;border-radius:99px;font-weight:800;font-size:13px;display:none;z-index:40;max-width:92%;text-align:center;box-shadow:var(--shadow)}
+#toast.show{display:block}
+.modal-bg{position:fixed;inset:0;background:#0008;z-index:60;display:none;align-items:center;justify-content:center;padding:20px;backdrop-filter:blur(4px)}
+.modal-bg.on{display:flex}
+.modal{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:18px;max-width:400px;width:100%;box-shadow:0 10px 30px #0006}
+.modal h3{margin:0 0 10px;font:italic 900 20px "Barlow Condensed",Impact,sans-serif;text-transform:uppercase}
+.modal p{margin:0 0 14px;color:var(--mut);font-size:14px}
+.modal .row{margin-top:12px}
+.theme-t{position:absolute;top:12px;right:12px;background:#ffffff22;border:1px solid #ffffff44;color:#fff;border-radius:50%;width:36px;height:36px;padding:0;font-size:16px}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.55}}
+.ck.warn{animation:pulse 1s infinite}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+@media(min-width:520px){.bt{grid-template-columns:1fr 1fr 1fr}}
+</style>
+</head>
+<body>
+<header style="position:relative">
+  <button class="theme-t" onclick="toggleTheme()" aria-label="Thema wisselen" title="Thema">🌓</button>
+  <div style="display:flex;gap:12px;align-items:center">
+    <svg width="42" height="58" viewBox="0 0 42 58" aria-label="Trappers-wapen" style="filter:drop-shadow(0 3px 5px #0006)">
+      <path d="M21 2 L38 10 V28 C38 42 30 52 21 56 C12 52 4 42 4 28 V10 Z" fill="#0b2c6b" stroke="#f6c32b" stroke-width="2"/>
+      <path d="M21 8 L34 14 V28 C34 39 27 47 21 50 C15 47 8 39 8 28 V14 Z" fill="#f6c32b" opacity="0.15"/>
+      <text x="21" y="36" text-anchor="middle" font-family="Impact,sans-serif" font-size="20" fill="#f6c32b" font-weight="900">T</text>
+    </svg>
+    <div>
+      <h1>U11 Hockey Tracker</h1>
+      <p class="sub" id="sub"></p>
+    </div>
+  </div>
+  <div class="hs">
+    <select id="team" aria-label="Team">
+      <option value="geel">U11 Geel</option>
+      <option value="blauw">U11 Blauw</option>
+    </select>
+    <select id="me" aria-label="Jouw kind"></select>
+  </div>
+</header>
+
+<input type="file" id="photoInput" accept="image/*" style="display:none" onchange="handlePhotoPicked(event)">
+
+<main>
+  <section class="v" id="v-schema">
+    <div id="next"></div>
+    <div class="c">
+      <div class="hd"><h2 id="stitle">Schema</h2><span class="m">Seizoen 2026/27</span></div>
+      <div id="sched"></div>
+    </div>
+  </section>
+
+  <section class="v on" id="v-live">
+    <div class="c">
+      <div class="hd"><h2>Wedstrijd</h2><span class="m" id="gsum"></span></div>
+      <div class="sw" id="sw">🔔 WISSELEN!</div>
+      <div class="sb">
+        <div><div class="tn" id="hn"></div><div class="sc h" id="hs">0</div></div>
+        <div>
+          <div class="ck" id="ck" aria-live="polite" aria-atomic="true">15:00</div>
+          <div class="m" id="nx"></div>
+        </div>
+        <div><div class="tn" id="an"></div><div class="sc" id="as">0</div></div>
+      </div>
+      <div class="bt">
+        <button class="g" onclick="add('team')">＋ Trappers-doelpunt</button>
+        <button onclick="add('away')">＋ Tegendoelpunt</button>
+      </div>
+      <button class="o" id="stopSong" onclick="stopSong()" style="display:none;width:100%;margin-top:8px">⏹ Stop het lied</button>
+      <div class="row" style="margin-top:8px">
+        <button class="g" id="go" onclick="toggle()">▶ Start klok</button>
+        <button class="o" onclick="resetClock()">↺ Klok terug</button>
+      </div>
+      <div class="row" style="margin-top:8px">
+        <button class="o" onclick="undo()">↶ Ongedaan</button>
+        <button class="d" onclick="finish()">✓ Afronden</button>
+      </div>
+      <details>
+        <summary>Wedstrijdgegevens en notities</summary>
+        <div class="g2">
+          <div><label for="opp">Tegenstander</label><input id="opp" maxlength="40"></div>
+          <div><label for="dt">Datum</label><input id="dt" type="date"></div>
+        </div>
+        <div style="margin:8px 0"><label for="vn">Locatie</label><input id="vn" maxlength="60"></div>
+        <label for="nt">Notities</label><textarea id="nt" rows="3"></textarea>
+      </details>
+    </div>
+
+    <div class="c">
+      <div class="hd"><h2>Snel registreren</h2><span class="m" id="qn"></span></div>
+      <div class="bt">
+        <button class="g" onclick="openGoalFlow()">🥅 Doelpunt<small>met assist</small></button>
+        <button onclick="add('assist')">🤝 Assist</button>
+        <button onclick="add('shot')">🎯 Schot</button>
+        <button id="svb" onclick="add('save')" style="display:none">🧤 Redding</button>
+        <button onclick="add('pen')">🏒 Penalty shot</button>
+        <button onclick="add('strafe')">🚨 Straf<small>penalty shot tegen</small></button>
+        <button id="rb" onclick="add('rgoal')" style="background:var(--blue);color:#fff">⚡ Uitdager scoort</button>
+      </div>
+      <p class="m">Doelpunt van je kind of de uitdager telt ook voor de teamscore. Penalty shot: je kind neemt hem zelf. Straf: je kind krijgt een straf en de tegenpartij neemt een penalty shot.</p>
+    </div>
+
+    <div class="c">
+      <div class="hd"><h2>Acties</h2><span class="m" id="ec"></span></div>
+      <div id="evs"></div>
+    </div>
+  </section>
+
+  <section class="v" id="v-stats">
+    <div id="pcard"></div>
+    <div class="c">
+      <div class="hd"><h2>Deze wedstrijd</h2><span class="m" id="cn"></span></div>
+      <div class="sg" id="cur"></div>
+    </div>
+    <div class="c">
+      <div class="hd"><h2>Per tegenstander</h2><span class="m">Dit seizoen</span></div>
+      <div id="oppStats"></div>
+    </div>
+  </section>
+
+  <section class="v" id="v-race">
+    <div class="c">
+      <div class="hd"><h2>🏆 Race naar 10</h2><span class="m">Gouden stick</span></div>
+      <p class="m" style="margin-top:0">Wie als eerste 10 doelpunten dit seizoen maakt, wint de gouden stick. Tik op het schildje/rondje om een spelerfoto te kiezen.</p>
+      <label for="rv">Race tegen</label>
+      <select id="rv" style="margin-bottom:12px"></select>
+      <div id="race"></div>
+      <div class="row">
+        <button class="g" onclick="confetti()">🎉 Vier de winnaar</button>
+        <button class="o" onclick="resetRace()">Reset race</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="v" id="v-hist">
+    <div class="c">
+      <div class="hd"><h2>Historie</h2><span class="m" id="hc"></span></div>
+      <div class="sg" id="tot" style="margin-bottom:8px"></div>
+      <div class="row" style="margin-bottom:12px">
+        <button class="o" onclick="exportCSV()">📄 Exporteer CSV</button>
+      </div>
+      <div id="hist"></div>
+    </div>
+  </section>
+
+  <section class="v" id="v-set">
+    <div class="c">
+      <div class="hd"><h2>Spelersfoto's</h2><span class="m">Beheer</span></div>
+      <p class="m" style="margin-top:0">Tik bij Stats of Race op het schildje van een speler om een foto van je telefoon te kiezen, of kies hier direct een speler:</p>
+      <div class="row">
+        <select id="photoPlayerSelect"></select>
+        <button class="g" style="flex:0 0 auto" onclick="pickPhotoForSelected()">📷 Kies foto</button>
+      </div>
+    </div>
+
+    <div class="c">
+      <div class="hd"><h2>☁️ GitHub Koppeling</h2><span class="m">Cloud & Foto's</span></div>
+      <p class="m" style="margin-top:0">Koppel je GitHub-repository om automatisch foto's uit je repo te laden (bijv. <code>photos/45.jpg</code>) of om je data naar GitHub te back-uppen.</p>
+      <label for="ghRepo">GitHub Repository (bijv. <code>jouwnaam/u11-tracker</code>)</label>
+      <input id="ghRepo" placeholder="gebruikersnaam/repository" style="margin-bottom:8px">
+      <label for="ghToken">GitHub Personal Access Token (alleen nodig voor Cloud Sync)</label>
+      <input id="ghToken" type="password" placeholder="ghp_..." style="margin-bottom:10px">
+      <div class="row">
+        <button class="g" onclick="ghPush()">⬆ Opslaan naar GitHub</button>
+        <button class="o" onclick="ghPull()">⬇ Laden van GitHub</button>
+      </div>
+      <p class="m" id="ghStatus" style="margin-bottom:0"></p>
+    </div>
+
+    <div class="c">
+      <div class="hd"><h2>Instellingen</h2></div>
+      <label for="fm">Speelvorm U11 (IJshockey Nederland 2026–27)</label>
+      <select id="fm">
+        <option value="15">Toernooi met 3 clubs · 15 min doorlopend</option>
+        <option value="18">Toernooi met 4 clubs · 18 min doorlopend</option>
+      </select>
+      <label style="display:flex;gap:8px;align-items:center;margin:12px 0;font-size:14px;color:var(--ink)">
+        <input type="checkbox" id="sg" style="width:auto">Wisselsignaal elke 60 seconden (geluid + trilling)
+      </label>
+      <label style="display:flex;gap:8px;align-items:center;margin:0 0 12px;font-size:14px;color:var(--ink)">
+        <input type="checkbox" id="sn" style="width:auto">Doelpuntlied afspelen bij een Trappers-doelpunt
+      </label>
+      <label style="display:flex;gap:8px;align-items:center;margin:0 0 12px;font-size:14px;color:var(--ink)">
+        <input type="checkbox" id="pw" style="width:auto">Pauzeer klok automatisch bij wisselsignaal
+      </label>
+      <div class="row" style="margin-bottom:8px">
+        <button class="o" onclick="playSong()">🎵 Test lied</button>
+        <button class="o" onclick="stopSong()">⏹ Stop</button>
+      </div>
+      <button class="o" onclick="unlock();sig()" style="width:100%">🔔 Test wisselsignaal</button>
+      <p class="m">Doorlopende tijd; geen bodychecks, slapshots, icing of buitenspel. Controleer bij je coach of de speeldag afwijkt.</p>
+    </div>
+
+    <div class="c">
+      <div class="hd"><h2>Handmatige Back-up</h2></div>
+      <p class="m" style="margin-top:0">Gegevens staan standaard in deze browser. Download regelmatig een back-up of gebruik GitHub Sync hierboven.</p>
+      <div class="row" style="margin-bottom:8px">
+        <button class="g" onclick="downloadBk()">⬇ Download bestand</button>
+        <button class="o" onclick="copyBk()">📋 Kopieer</button>
+      </div>
+      <label for="bkFile">Of kies een back-upbestand</label>
+      <input type="file" id="bkFile" accept="application/json,.json" onchange="uploadBk(event)" style="margin-bottom:8px">
+      <label for="bk">Of plak hier een back-up</label>
+      <textarea id="bk" rows="3" placeholder="Plak hier een back-up om te herstellen"></textarea>
+      <div class="row" style="margin-top:8px">
+        <button class="g" onclick="restore()">Herstel</button>
+        <button class="d" onclick="newGame()">Nieuwe wedstrijd</button>
+      </div>
+      <button class="d" onclick="clearHist()" style="width:100%;margin-top:8px">Wis historie</button>
+      <p class="m" id="sv"></p>
+    </div>
+
+    <div class="c">
+      <div class="hd"><h2>Over</h2></div>
+      <p class="m" style="margin:0">U11 Hockey Tracker · v2.2 (GitHub & Photo Edition) · Offline-first PWA</p>
+    </div>
+  </section>
+</main>
+
+<nav id="nav">
+  <button data-t="schema"><span>📅</span>Schema</button>
+  <button data-t="live" class="on"><span>⏱</span>Live</button>
+  <button data-t="stats"><span>📊</span>Stats</button>
+  <button data-t="race"><span>🏆</span>Race</button>
+  <button data-t="hist"><span>🕘</span>Historie</button>
+  <button data-t="set"><span>⚙️</span>Instellingen</button>
+</nav>
+
+<div id="toast" role="status" aria-live="polite"></div>
+<div class="modal-bg" id="modalBg" onclick="if(event.target===this)closeModal()">
+  <div class="modal" id="modalBox"></div>
+</div>
+
+<script>
+'use strict';
+
+/* ============================ 1. HELPERS ============================ */
+const $ = i => document.getElementById(i);
+const $$ = s => document.querySelectorAll(s);
+
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+const td = () => {
+  const d = new Date();
+  return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+};
+
+const fmt = s => {
+  s = Math.max(0, s|0);
+  const h = s/3600|0, m = (s%3600)/60|0, sec = s%60;
+  if (h > 0) return h + ':' + String(m).padStart(2,'0') + ':' + String(sec).padStart(2,'0');
+  return String(m).padStart(2,'0') + ':' + String(sec).padStart(2,'0');
+};
+
+/* ============================ 2. STATE & ROSTERS ============================ */
+const K = 'u11-tracker-v2';
+
+const GEEL = [
+  [44,'Luxx Donders'],[1,'Lott Donders','G'],[82,'Sara Gommers','G'],
+  [4,'Mickey van den Heiligenberg','D/F'],[98,'Ryan Jonckers'],[7,'Brody Koenraat'],
+  [22,'Laurens Krouwel'],[45,'Jay-Jay Landveld','D/F'],[38,'Vigo Pinas','D/F'],
+  [97,'Misha Schollen'],[75,'Bent van Spijk'],[96,'Jake Stokx'],
+  [6,'Yisen Sun','D/F'],[9,'Duuk Verhoeven','D/F']
+];
+const BLAUW = [
+  [23,'Guus van der Weerden','G'],[42,'Brent van Lieshout','D'],
+  [3,'Johnny van Biezen','D/F'],[72,'Aurélie van Bijlen','F'],
+  [77,'Shaian Contreras'],[34,'Joep van Dun'],[18,'Jony van Dun','D/F'],
+  [12,'Lev van Gorp','D/F'],[13,'Jayvano van Rijsewijk'],
+  [19,'Vic van de Wouw','D/F'],[10,'Mack Zeebregts','D/F']
+];
+
+const ROS = [
+  ...GEEL.map(p => ({no:p[0], n:p[1], pos:p[2]||'', team:'geel'})),
+  ...BLAUW.map(p => ({no:p[0], n:p[1], pos:p[2]||'', team:'blauw'}))
+].map(p => ({...p, id:String(p.no), short:p.n.split(' ')[0]}))
+ .sort((a,b) => a.n.localeCompare(b.n));
+
+const P = id => ROS.find(p => p.id === id) || {id:'?', no:'?', n:'Onbekend', short:'?', pos:'', team:'?'};
+const Popt = id => ROS.find(p => p.id === id) || null;
+
+// Standaard ingebakken of GitHub-foto's
+const PH = {};
+
+// Logo-map voor tegenstanders
+const LG = [];
+const lg = n => { const f = LG.find(x => (n||'').startsWith(x[0])); return f ? f[1] : ''; };
+const lgs = n => { const f = LG.find(x => (n||'').startsWith(x[0])); return f && f[2] >= 2 ? 'border-radius:6px;object-fit:contain;background:#fff;width:auto;max-width:' + (f[2]===3?'110':'64') + 'px' : f && f[2] ? 'border-radius:0;object-fit:contain' : 'border-radius:50%;object-fit:cover'; };
+const li = (n,s) => lg(n) ? `<img src="${lg(n)}" alt="" style="width:${s}px;height:${s}px;${lgs(n)};vertical-align:middle;margin-right:6px">` : '';
+
+/* ============================ 3. SCHEMA ============================ */
+const SCH = {
+  geel: [
+    ["2026-10-04","zo 4 okt","11:45",["Breda Yeti's","Smoke Eaters Geleen"],"Glanerbrook Geleen"],
+    ["2026-10-11","zo 11 okt","14:00",["Kemphanen","Utrecht Dragons"],"Tilburg"],
+    ["2026-11-01","zo 1 nov","11:45",["Kemphanen U11 Oranje","Smoke Eaters Geleen"],"Glanerbrook Geleen"],
+    ["2026-11-14","za 14 nov","15:00",["Kemphanen","Smoke Eaters Geleen"],"Glanerbrook Geleen"],
+    ["2026-11-21","za 21 nov","16:15",["Amsterdam Tigers Zwart","Red Eagles Den Bosch"],"Sportiom Den Bosch"],
+    ["2026-11-29","zo 29 nov","12:30",["Amsterdam Tigers Wit","Leiden Lions"],"De Vliet, Leiden"],
+    ["2026-12-12","za 12 dec","14:00",["GIJS Groningen","Amsterdam Tigers Wit"],"Jaap Edenhal Amsterdam"],
+    ["2026-12-19","za 19 dec","13:15",["Smoke Eaters Geleen","Kemphanen"],"Eindhoven (kleine hal)"],
+    ["2027-01-10","zo 10 jan","13:15",["Red Eagles Den Bosch","Zoetermeer Panters"],"Silverdome Zoetermeer"],
+    ["2027-01-17","zo 17 jan","10:15",["Breda Yeti's","Hijs Hokij Den Haag"],"Kunstijsbaan Breda"],
+    ["2027-01-23","za 23 jan","14:15",["Dordrecht Lions","Hijs Hokij Den Haag"],"Sportboulevard Dordrecht"],
+    ["2027-01-30","za 30 jan","13:15",["Smoke Eaters Geleen","Kemphanen U11 Oranje"],"Eindhoven (kleine hal)"],
+    ["2027-02-06","za 6 feb","14:00",["Amsterdam Tigers Zwart","Hijs Hokij Den Haag"],"Jaap Edenhal Amsterdam"],
+    ["2027-02-14","zo 14 feb","12:15",["Breda Yeti's","Hijs Hokij Den Haag"],"Den Haag"],
+    ["2027-03-07","zo 7 mrt","13:00",["Amsterdam Tigers Zwart","Dordrecht Lions"],"Tilburg"],
+    ["2027-03-13","za 13 mrt","13:15",["Leiden Lions","Kemphanen"],"Eindhoven (kleine hal)"],
+    ["2027-03-21","zo 21 mrt","14:00",["Amsterdam Tigers Wit","Hijs Hokij Den Haag"],"Tilburg"]
+  ],
+  blauw: [
+    ["2026-10-03","za 3 okt","13:15",["Red Eagles Den Bosch","Kemphanen U11 Oranje"],"Eindhoven (kleine hal)"],
+    ["2026-10-11","zo 11 okt","10:45",["Nijmegen Devils","Smoke Eaters Geleen"],"Tilburg"],
+    ["2026-10-31","za 31 okt","14:00",["Utrecht Dragons","Amsterdam Tigers Wit"],"Jaap Edenhal Amsterdam"],
+    ["2026-11-15","zo 15 nov","12:30",["Capitals Leeuwarden Blauw","Leiden Lions"],"De Vliet, Leiden"],
+    ["2026-11-22","zo 22 nov","14:30",["Hijs Hokij Den Haag","Leiden Lions"],"Den Haag"],
+    ["2026-11-28","za 28 nov","14:00",["Alcmaria Flames Alkmaar","Amsterdam Tigers Zwart"],"Jaap Edenhal Amsterdam"],
+    ["2026-12-13","zo 13 dec","11:45",["Kemphanen U11 Oranje","Smoke Eaters Geleen"],"Glanerbrook Geleen"],
+    ["2026-12-20","zo 20 dec","10:15",["Breda Yeti's","Dordrecht Lions"],"Kunstijsbaan Breda"],
+    ["2027-01-09","za 9 jan","14:15",["Breda Yeti's","Dordrecht Lions"],"Sportboulevard Dordrecht"],
+    ["2027-01-16","za 16 jan","13:15",["Kemphanen","Kemphanen U11 Oranje"],"Eindhoven (kleine hal)"],
+    ["2027-01-23","za 23 jan","13:15",["Kemphanen","Zoetermeer Panters"],"Eindhoven (kleine hal)"],
+    ["2027-01-30","za 30 jan","16:15",["Kemphanen","Red Eagles Den Bosch"],"Sportiom Den Bosch"],
+    ["2027-02-07","zo 7 feb","11:45",["Nijmegen Devils","Enschede Lions"],"IJsbaan Twente"],
+    ["2027-02-13","za 13 feb","16:15",["Enschede Lions","Red Eagles Den Bosch"],"Sportiom Den Bosch"],
+    ["2027-03-07","zo 7 mrt","10:45",["Breda Yeti's","Smoke Eaters Geleen"],"Tilburg"],
+    ["2027-03-14","zo 14 mrt","14:00",["Kemphanen U11 Oranje","Smoke Eaters Geleen"],"Tilburg"],
+    ["2027-03-21","zo 21 mrt","10:45",["Amsterdam Tigers Zwart","Utrecht Dragons"],"Tilburg"],
+    ["2027-03-28","zo 28 mrt","10:00",["Kemphanen U11 Oranje","Hijs Hokij Den Haag"],"Den Haag"]
+  ]
+};
+
+const LBL = {
+  goal:'Doelpunt', assist:'Assist', shot:'Schot', save:'Redding',
+  pen:'Penalty shot', strafe:'Straf: penalty shot tegen',
+  rgoal:'Doelpunt', team:'Teamgoal', away:'Doelpunt tegen'
+};
+
+/* ============================ 4. PERSISTENCE ============================ */
+const ng = len => ({
+  opp:'', date:td(), venue:'', home:0, away:0, len, rem:len,
+  sk:0, run:false, ev:[], notes:'',
+  startedAt:null, remAtStart:null
+});
+const fresh = () => ({
+  team:'geel', me:'45', rival:'', fmt:15, sig:true, song:true, pauseOnSig:false,
+  g:ng(900), hist:[], won:null, theme:'dark', undo:[],
+  photos:{}, ghRepo:''
+});
+
+let S = load();
+
+function load(){
+  try {
+    const savedTheme = localStorage.getItem('u11-theme') || 'dark';
+    document.documentElement.dataset.theme = savedTheme;
+
+    const raw = localStorage.getItem(K);
+    if (raw){
+      const o = JSON.parse(raw);
+      if (o && o.g && Array.isArray(o.hist)){
+        const f = fresh();
+        const r = {...f, ...o};
+        r.g = {...ng(900), ...o.g, run:false, ev:o.g.ev||[]};
+        r.photos = o.photos || {};
+        r.undo = [];
+        r.theme = savedTheme;
+        return r;
+      }
+    }
+  } catch(e){ console.warn('Laden mislukt', e); }
+  return fresh();
+}
+
+let saveTimer = null;
+function save(){
+  if (saveTimer) return;
+  saveTimer = setTimeout(() => {
+    saveTimer = null;
+    try {
+      localStorage.setItem(K, JSON.stringify(S));
+      $('sv').textContent = '● Opgeslagen op dit toestel';
+    } catch(e){
+      $('sv').textContent = 'Opslaan niet beschikbaar in deze browser';
+    }
+  }, 150);
+}
+function saveNow(){
+  if (saveTimer){ clearTimeout(saveTimer); saveTimer = null; }
+  try { localStorage.setItem(K, JSON.stringify(S)); $('sv').textContent = '● Opgeslagen'; }
+  catch(e){ $('sv').textContent = 'Opslaan niet beschikbaar'; }
+}
+
+/* ============================ 5. PHOTO & GITHUB SYSTEM ============================ */
+let activePhotoPid = null;
+
+function getPhotoUrl(pid){
+  if (S.photos && S.photos[pid]) return S.photos[pid];
+  if (PH[pid]) return PH[pid];
+  if (S.ghRepo) return `https://raw.githubusercontent.com/${S.ghRepo}/main/photos/${pid}.jpg`;
+  return `photos/${pid}.jpg`;
+}
+
+function renderAvatar(p, cls){
+  const src = getPhotoUrl(p.id);
+  const w = cls === 'ph' ? 64 : 44;
+  const h = cls === 'ph' ? 88 : 56;
+  return `<div class="av-wrap" onclick="pickPhoto('${p.id}')" title="Tik om foto van #${p.no} ${esc(p.n)} te wijzigen">
+    <img class="${cls}" src="${esc(src)}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='block'">
+    <svg width="${w}" height="${h}" viewBox="0 0 42 58" style="display:none;flex:none">
+      <path d="M21 2 L38 10 V28 C38 42 30 52 21 56 C12 52 4 42 4 28 V10 Z" fill="#0b2c6b" stroke="#f6c32b" stroke-width="2"/>
+      <text x="21" y="38" text-anchor="middle" font-family="Impact" font-size="22" fill="#f6c32b" font-weight="900">${p.no}</text>
+    </svg>
+  </div>`;
+}
+
+function pickPhoto(pid){
+  if (!pid) return;
+  activePhotoPid = String(pid);
+  $('photoInput').value = '';
+  $('photoInput').click();
+}
+
+function pickPhotoForSelected(){
+  const pid = $('photoPlayerSelect').value;
+  if (!pid){ toast('Kies eerst een speler'); return; }
+  pickPhoto(pid);
+}
+
+function handlePhotoPicked(ev){
+  const file = ev.target.files[0];
+  if (!file || !activePhotoPid) return;
+  const reader = new FileReader();
+  reader.onload = e => {
+    const img = new Image();
+    img.onload = () => {
+      const canvas = document.createElement('canvas');
+      const size = 240;
+      canvas.width = size;
+      canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      const min = Math.min(img.width, img.height);
+      const sx = (img.width - min) / 2;
+      const sy = (img.height - min) * 0.15; // Iets hoger croppen voor gezichten
+      ctx.drawImage(img, sx, Math.max(0, sy), min, min, 0, 0, size, size);
+      S.photos = S.photos || {};
+      S.photos[activePhotoPid] = canvas.toDataURL('image/jpeg', 0.82);
+      saveNow();
+      R();
+      toast('Foto opgeslagen voor #' + activePhotoPid);
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+async function ghPush(){
+  const repo = $('ghRepo').value.trim();
+  const token = $('ghToken').value.trim();
+  if (!repo || !token){
+    toast('Vul je GitHub repo én Personal Access Token in');
+    return;
+  }
+  S.ghRepo = repo;
+  localStorage.setItem('u11-gh-token', token);
+  saveNow();
+  $('ghStatus').textContent = '⏳ Bezig met opslaan naar GitHub...';
+  try {
+    const apiUrl = `https://api.github.com/repos/${repo}/contents/backup.json`;
+    const headers = {
+      'Authorization': `Bearer ${token}`,
+      'Accept': 'application/vnd.github+json'
+    };
+    let sha = undefined;
+    const getRes = await fetch(apiUrl, {headers});
+    if (getRes.ok){
+      const existing = await getRes.json();
+      sha = existing.sha;
+    }
+    const content = btoa(unescape(encodeURIComponent(JSON.stringify(S, null, 2))));
+    const putRes = await fetch(apiUrl, {
+      method: 'PUT',
+      headers: {...headers, 'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        message: `U11 Tracker Sync ${td()}`,
+        content,
+        ...(sha ? {sha} : {})
+      })
+    });
+    if (!putRes.ok) throw new Error('GitHub fout: ' + putRes.status);
+    $('ghStatus').textContent = '✓ Succesvol opgeslagen in ' + repo + '/backup.json';
+    toast('Opgeslagen op GitHub!');
+  } catch(e){
+    $('ghStatus').textContent = '❌ Opslaan mislukt: controleer je repo-naam en token.';
+    toast('GitHub Sync mislukt');
+  }
+}
+
+async function ghPull(){
+  const repo = $('ghRepo').value.trim();
+  const token = $('ghToken').value.trim();
+  if (!repo){
+    toast('Vul eerst je GitHub repository in');
+    return;
+  }
+  S.ghRepo = repo;
+  if (token) localStorage.setItem('u11-gh-token', token);
+  $('ghStatus').textContent = '⏳ Ophalen van GitHub...';
+  try {
+    const headers = token ? {'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github.raw'} : {};
+    const url = token
+      ? `https://api.github.com/repos/${repo}/contents/backup.json`
+      : `https://raw.githubusercontent.com/${repo}/main/backup.json?t=${Date.now()}`;
+    const res = await fetch(url, {headers});
+    if (!res.ok) throw new Error('Niet gevonden');
+    const d = await res.json();
+    if (!d.g || !Array.isArray(d.hist)) throw new Error('Ongeldig formaat');
+    const ok = await confirmModal('GitHub data inladen?', 'Je huidige gegevens op dit toestel worden vervangen door de back-up van GitHub.', 'Inladen', true);
+    if (!ok){ $('ghStatus').textContent = ''; return; }
+    S = {...fresh(), ...d, ghRepo: repo};
+    S.g.run = false;
+    S.undo = [];
+    saveNow(); R();
+    $('ghStatus').textContent = '✓ Gegevens ingeladen van GitHub';
+    toast('Gegevens van GitHub geladen!');
+  } catch(e){
+    $('ghStatus').textContent = '❌ Kon backup.json niet vinden in ' + repo;
+    toast('Laden van GitHub mislukt');
+  }
+}
+
+/* ============================ 6. TOAST & MODAL ============================ */
+let tt;
+function toast(m){
+  const t = $('toast');
+  t.textContent = m;
+  t.classList.add('show');
+  clearTimeout(tt);
+  tt = setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+function confirmModal(title, message, okLabel = 'OK', danger = false){
+  return new Promise(resolve => {
+    const bg = $('modalBg'), box = $('modalBox');
+    box.innerHTML = `
+      <h3>${esc(title)}</h3>
+      <p>${esc(message)}</p>
+      <div class="row">
+        <button class="o" data-act="no">Annuleer</button>
+        <button class="${danger ? 'd' : 'g'}" data-act="yes">${esc(okLabel)}</button>
+      </div>`;
+    bg.classList.add('on');
+    const onClick = e => {
+      const b = e.target.closest('button');
+      if (!b) return;
+      box.querySelectorAll('button').forEach(x => x.removeEventListener('click', onClick));
+      bg.classList.remove('on');
+      resolve(b.dataset.act === 'yes');
+    };
+    box.querySelectorAll('button').forEach(x => x.addEventListener('click', onClick));
+  });
+}
+
+function promptModal(title, fields, okLabel = 'Opslaan'){
+  return new Promise(resolve => {
+    const bg = $('modalBg'), box = $('modalBox');
+    let html = `<h3>${esc(title)}</h3><div>`;
+    fields.forEach(f => {
+      html += `<label for="m_${f.id}">${esc(f.label)}</label>`;
+      if (f.type === 'select'){
+        html += `<select id="m_${f.id}" style="margin-bottom:10px">${f.options.map(o => `<option value="${esc(o.value)}"${o.value===f.value?' selected':''}>${esc(o.label)}</option>`).join('')}</select>`;
+      } else {
+        html += `<input id="m_${f.id}" type="${f.type||'text'}" value="${esc(f.value||'')}" style="margin-bottom:10px">`;
+      }
+    });
+    html += `</div><div class="row"><button class="o" data-act="no">Annuleer</button><button class="g" data-act="yes">${esc(okLabel)}</button></div>`;
+    box.innerHTML = html;
+    bg.classList.add('on');
+    setTimeout(() => { const first = box.querySelector('input,select'); if (first) first.focus(); }, 50);
+    const onClick = e => {
+      const b = e.target.closest('button');
+      if (!b) return;
+      if (b.dataset.act === 'no'){ bg.classList.remove('on'); resolve(null); return; }
+      const out = {};
+      fields.forEach(f => { out[f.id] = $('m_' + f.id).value; });
+      bg.classList.remove('on');
+      resolve(out);
+    };
+    box.querySelectorAll('button').forEach(x => x.addEventListener('click', onClick));
+  });
+}
+
+function closeModal(){ $('modalBg').classList.remove('on'); }
+
+/* ============================ 7. TEAM/PLAYER HELPERS ============================ */
+const TN = () => S.team === 'blauw' ? 'Blauw' : 'Geel';
+const hasData = g => g.ev.length || g.home || g.away;
+
+const allEv = () => S.hist.flatMap(g => g.ev).concat(S.g.ev);
+const cnt = (pid, types, evs = allEv()) => evs.filter(e => e.pid === pid && types.includes(e.type)).length;
+
+const raceGoals = pid => pid === S.rival ? cnt(pid, ['rgoal']) : cnt(pid, ['goal']);
+const gamesOf = pid => S.hist.concat([S.g]).filter(g => g.ev.some(e => e.pid === pid)).length;
+
+/* ============================ 8. AUDIO ============================ */
+let ac = null;
+function unlock(){
+  try {
+    ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+    if (ac.state === 'suspended') ac.resume();
+  } catch(e){}
+}
+function sig(){
+  try {
+    if (ac){
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.type = 'square'; o.frequency.value = 880;
+      g.gain.value = .18;
+      o.connect(g); g.connect(ac.destination);
+      o.start(); o.stop(ac.currentTime + .5);
+    }
+  } catch(e){}
+  if (navigator.vibrate) navigator.vibrate([250,100,250]);
+  const w = $('sw');
+  w.classList.add('on');
+  setTimeout(() => w.classList.remove('on'), 2800);
+}
+function sigAuto(){ if (S.sig) sig(); if (S.pauseOnSig && S.g.run) toggle(); }
+
+let songNodes = [];
+function playSong(){
+  if (!S.song) return;
+  try {
+    unlock();
+    if (!ac) return;
+    stopSong();
+    const now = ac.currentTime;
+    const notes = [523.25, 659.25, 783.99, 1046.5];
+    notes.forEach((f,i) => {
+      const o = ac.createOscillator(), g = ac.createGain();
+      o.type = 'triangle'; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, now);
+      g.gain.exponentialRampToValueAtTime(0.12, now + 0.02 + i*0.08);
+      g.gain.exponentialRampToValueAtTime(0.0001, now + 0.35 + i*0.08);
+      o.connect(g); g.connect(ac.destination);
+      o.start(now + i*0.08); o.stop(now + 0.4 + i*0.08);
+      songNodes.push(o, g);
+    });
+    $('stopSong').style.display = 'block';
+    setTimeout(() => { $('stopSong').style.display = 'none'; }, 900);
+  } catch(e){}
+}
+function stopSong(){
+  try { songNodes.forEach(n => { try { n.stop && n.stop(); } catch(e){} }); songNodes = []; } catch(e){}
+  $('stopSong').style.display = 'none';
+}
+
+/* ============================ 9. CLOCK ============================ */
+let wl = null;
+async function wake(on){
+  try {
+    if (on && 'wakeLock' in navigator && !wl){
+      wl = await navigator.wakeLock.request('screen');
+      wl.addEventListener('release', () => { wl = null; });
+    } else if (!on && wl){
+      await wl.release(); wl = null;
+    }
+  } catch(e){}
+}
+
+function toggle(){
+  const g = S.g;
+  if (g.run){
+    if (g.startedAt) {
+      g.rem = Math.max(0, g.remAtStart - Math.floor((Date.now() - g.startedAt) / 1000));
+    }
+    g.run = false;
+    g.startedAt = null;
+    g.remAtStart = null;
+  } else {
+    if (g.rem <= 0){ toast('Tijd om. Zet de klok terug voor een nieuwe wedstrijd.'); return; }
+    unlock();
+    if (g.len - g.rem === 0) g.sk = 0;
+    g.startedAt = Date.now();
+    g.remAtStart = g.rem;
+    g.run = true;
+  }
+  save(); clk(); wake(g.run);
+  $('go').textContent = g.run ? 'Ⅱ Pauze' : '▶ Start klok';
+}
+
+async function resetClock(){
+  const ok = await confirmModal('Klok terugzetten?', 'De klok gaat terug naar ' + fmt(S.g.len) + '.', 'Ja, terug');
+  if (!ok) return;
+  const g = S.g;
+  g.run = false; g.rem = g.len; g.sk = 0;
+  g.startedAt = null; g.remAtStart = null;
+  save(); R();
+}
+
+function clk(){
+  const g = S.g;
+  let rem = g.rem;
+  if (g.run && g.startedAt){
+    rem = Math.max(0, g.remAtStart - Math.floor((Date.now() - g.startedAt) / 1000));
+  }
+  const elapsed = g.len - rem;
+  const ck = $('ck');
+  ck.textContent = fmt(rem);
+  ck.className = 'ck' + (g.run ? (rem <= 60 ? ' l warn' : ' r') : '');
+  $('nx').textContent = S.sig ? 'WISSEL OVER ' + fmt(Math.max(0, (g.sk + 1) * 60 - elapsed)) : '';
+  $('go').textContent = g.run ? 'Ⅱ Pauze' : '▶ Start klok';
+}
+
+setInterval(() => {
+  const g = S.g;
+  if (!g.run || !g.startedAt) return;
+  const rem = Math.max(0, g.remAtStart - Math.floor((Date.now() - g.startedAt) / 1000));
+  const k = Math.floor((g.len - rem) / 60);
+  if (k > g.sk && rem > 0){ g.sk = k; sigAuto(); }
+  if (rem === 0 && g.rem > 0){
+    g.rem = 0;
+    g.run = false;
+    g.startedAt = null; g.remAtStart = null;
+    if (navigator.vibrate) navigator.vibrate([200,100,200]);
+    toast('Tijd om! Rond de wedstrijd af.');
+    wake(false);
+    save(); R(); return;
+  }
+  g.rem = rem;
+  clk();
+  save();
+}, 500);
+
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible'){
+    if (S.g.run) { wake(true); clk(); }
+  }
+});
+
+/* ============================ 10. EVENTS ============================ */
+function pushUndo(){
+  S.undo.push({
+    home:S.g.home, away:S.g.away,
+    ev:JSON.parse(JSON.stringify(S.g.ev))
+  });
+  if (S.undo.length > 20) S.undo.shift();
+}
+
+function add(type, pidOverride){
+  const g = S.g;
+  if (['goal','assist','shot','save','pen','strafe'].includes(type) && !S.me){
+    toast('Kies eerst je kind bovenaan'); return;
+  }
+  if (type === 'rgoal' && !S.rival){ toast('Kies eerst een uitdager bij Race'); return; }
+  const pid = pidOverride !== undefined ? pidOverride
+    : type === 'rgoal' ? S.rival
+    : ['goal','assist','shot','save','pen','strafe'].includes(type) ? S.me
+    : '';
+
+  pushUndo();
+
+  g.ev.push({id:Date.now()+Math.random(), type, pid, t:g.rem});
+  if (['goal','rgoal','team'].includes(type)) g.home++;
+  if (type === 'away') g.away++;
+
+  if (navigator.vibrate) navigator.vibrate(25);
+  if (['goal','rgoal','team'].includes(type)) playSong();
+
+  checkWin();
+  save(); R();
+  const p = pid ? Popt(pid) : null;
+  toast(LBL[type] + (p ? ' · ' + p.short : '') + ' geregistreerd');
+}
+
+async function openGoalFlow(){
+  if (!S.me){ toast('Kies eerst je kind'); return; }
+  const teamPlayers = ROS.filter(p => p.team === S.team && p.id !== S.me);
+  const res = await promptModal('Doelpunt registreren', [
+    {id:'scorer', label:'Wie scoorde?', type:'select', value:S.me, options:[
+      {value:S.me, label:P(S.me).n + ' (jij)'},
+      {value:'__team__', label:'Teamgenoot (naamloos)'}
+    ]},
+    {id:'assist', label:'Assist (optioneel)', type:'select', value:'', options:[
+      {value:'', label:'Geen assist'},
+      ...teamPlayers.map(p => ({value:p.id, label:p.n + ' #' + p.no}))
+    ]}
+  ], 'Registreer');
+
+  if (!res) return;
+
+  pushUndo();
+
+  if (res.scorer === '__team__'){
+    S.g.ev.push({id:Date.now()+Math.random(), type:'team', pid:'', t:S.g.rem});
+    S.g.home++;
+  } else {
+    S.g.ev.push({id:Date.now()+Math.random(), type:'goal', pid:res.scorer, t:S.g.rem});
+    S.g.home++;
+  }
+  if (res.assist){
+    S.g.ev.push({id:Date.now()+Math.random()+1, type:'assist', pid:res.assist, t:S.g.rem});
+  }
+
+  if (navigator.vibrate) navigator.vibrate(25);
+  playSong();
+  checkWin();
+  save(); R();
+  toast('Doelpunt geregistreerd' + (res.assist ? ' + assist' : ''));
+}
+
+function rev(e){
+  if (['goal','rgoal','team'].includes(e.type)) S.g.home = Math.max(0, S.g.home - 1);
+  if (e.type === 'away') S.g.away = Math.max(0, S.g.away - 1);
+}
+
+function undo(){
+  if (S.undo.length){
+    const snap = S.undo.pop();
+    S.g.home = snap.home;
+    S.g.away = snap.away;
+    S.g.ev = snap.ev;
+    fixWin();
+    save(); R();
+    toast('Ongedaan gemaakt');
+    return;
+  }
+  const e = S.g.ev.pop();
+  if (!e){ toast('Niets om ongedaan te maken'); return; }
+  rev(e);
+  fixWin(); save(); R();
+  toast('Ongedaan gemaakt');
+}
+
+function delEv(id){
+  const i = S.g.ev.findIndex(e => e.id === id);
+  if (i < 0) return;
+  pushUndo();
+  rev(S.g.ev[i]);
+  S.g.ev.splice(i, 1);
+  fixWin(); save(); R();
+}
+
+/* ============================ 11. RACE / WIN ============================ */
+function checkWin(){
+  if (S.won) return;
+  for (const id of [S.me, S.rival]){
+    if (id && raceGoals(id) >= 10){
+      S.won = {pid:id, date:td()};
+      confetti();
+      notifyWin(P(id).n);
+      tab('race');
+      return;
+    }
+  }
+}
+
+function fixWin(){
+  if (!S.won) return;
+  if (!Popt(S.won.pid) || raceGoals(S.won.pid) < 10) S.won = null;
+}
+
+function notifyWin(name){
+  try {
+    if ('Notification' in window && Notification.permission === 'granted'){
+      new Notification('🏆 ' + name + ' wint de gouden stick!', {body:'10 doelpunten bereikt!'});
+    }
+  } catch(e){}
+}
+
+async function resetRace(){
+  const ok = await confirmModal('Race resetten?', 'De winnaar wordt gewist en de teller begint opnieuw. De historie blijft bewaard.', 'Reset race', true);
+  if (!ok) return;
+  S.won = null;
+  save(); R();
+  toast('Race gereset');
+}
+
+/* ============================ 12. RENDER ============================ */
+function R(){
+  const g = S.g;
+  const T = ROS.filter(p => p.team === S.team);
+  const o = p => `<option value="${p.id}">${esc(p.n)} · #${p.no}</option>`;
+
+  $('team').value = S.team;
+  $('me').innerHTML = '<option value="">Kies je kind…</option>' + T.map(o).join('');
+  $('me').value = S.me;
+  $('rv').innerHTML = '<option value="">Geen uitdager</option>' + T.filter(p => p.id !== S.me).map(o).join('');
+  $('rv').value = S.rival;
+  $('photoPlayerSelect').innerHTML = T.map(o).join('');
+  if (S.me) $('photoPlayerSelect').value = S.me;
+
+  const m = Popt(S.me), r = Popt(S.rival);
+  $('sub').textContent = 'Tilburg Trappers U11 ' + TN() + (m ? ' · ' + m.short + ' #' + m.no : ' · kies hierboven je kind');
+  $('stitle').textContent = 'Schema U11 ' + TN();
+  $('hn').textContent = 'Trappers ' + TN();$('an').innerHTML = (lg(g.opp) ? '<img src="' + lg(g.opp) + '" alt="" style="display:block;width:40px;height:40px;' + lgs(g.opp) + ';margin:0 auto 4px">' : '') + esc(g.opp || 'Tegenstander');
+  $('hs').textContent = g.home;
+  $('as').textContent = g.away;
+
+  $('opp').value = g.opp;
+  $('dt').value = g.date;
+  $('vn').value = g.venue;
+  $('nt').value = g.notes;
+  $('gsum').textContent = (g.opp || 'Kies tegenstander') + ' · ' + g.date;
+
+  $('qn').textContent = m ? '#' + m.no + ' ' + m.short : 'Kies eerst je kind';
+  $('rb').textContent = '⚡ ' + (r ? r.short : 'Uitdager') + ' scoort';
+  $('rb').style.display = r ? '' : 'none';
+  $('svb').style.display = m && m.pos === 'G' ? '' : 'none';
+
+  $('ec').textContent = g.ev.length + ' acties';$('evs').innerHTML = g.ev.length
+    ? g.ev.slice().reverse().slice(0, 40).map(e => {
+        const p = e.pid ? Popt(e.pid) : null;
+        return `<div class="ev"><div><b>${LBL[e.type] || e.type}</b><div class="m">${p ? esc(p.n) + ' · ' : ''}${fmt(e.t)}</div></div><button class="d" onclick="delEv(${e.id})" aria-label="Verwijder">×</button></div>`;
+      }).join('')
+    : '<div class="empty">Nog geen acties. Tik op een knop hierboven.</div>';
+
+  $('fm').value = String(S.fmt);$('sg').checked = !!S.sig;
+  $('sn').checked = !!S.song;
+  $('pw').checked = !!S.pauseOnSig;
+  $('ghRepo').value = S.ghRepo || '';
+  $('ghToken').value = localStorage.getItem('u11-gh-token') \vert{}\vert{} '';    clk(); sched(); stats(); race(); hist(); wake(S.g.run); }  /* ============================ 13. VIEWS ============================ */ function tab(n){ $$('.v').forEach(v => v.classList.toggle('on', v.id === 'v-' + n));
+  $$('#nav button').forEach(b => b.classList.toggle('on', b.dataset.t === n)); window.scrollTo(0, 0); if (n !== 'live' && S.undo.length > 5) S.undo = S.undo.slice(-5); } $$
+('#nav button').forEach(b => b.onclick = () => tab(b.dataset.t));
+
+/* ============================ 14. STATS ============================ */
+function stats(){
+  const p = Popt(S.me);
+  if (!p){
+    $('pcard').innerHTML = '<div class="c empty">Kies bovenaan je kind om de spelerskaart te zien.</div>';
+    $('cur').innerHTML = '';
+    $('cn').textContent = '';$('oppStats').innerHTML = '';
+    return;
+  }
+  const K2 = p.pos === 'G';
+  const g = raceGoals(p.id);
+  const a = cnt(p.id, ['assist']);
+  const s = cnt(p.id, [K2 ? 'save' : 'shot']);
+  const games = gamesOf(p.id);
+
+  $('pcard').innerHTML = `<div class="card">
+    <div style="display:flex;gap:14px;align-items:center">
+      ${renderAvatar(p, 'ph')}
+      <div>
+        <div class="nm">${esc(p.n)}</div>
+        <div style="font-size:10px;font-weight:800;letter-spacing:.1em">TRAPPERS U11 ${TN().toUpperCase()} · #${p.no}${p.pos ? ' · ' + p.pos : ''}</div>
+      </div>
+    </div>
+    <div class="fg">
+      <div><b>${g}</b><span>Goals</span></div>
+      <div><b>${a}</b><span>Assists</span></div>
+      <div><b>${s}</b><span>${K2 ? 'Reddingen' : 'Schoten'}</span></div>
+      <div><b>${games}</b><span>Wedstr.</span></div>
+    </div>
+  </div>`;
+
+  const e = S.g.ev;
+  const c = t => cnt(p.id, t, e);
+  $('cn').textContent = '#' + p.no + ' ' + p.short;
+  $('cur').innerHTML = [
+    ['Goals', c(['goal'])],
+    ['Assists', c(['assist'])],
+    [K2 ? 'Reddingen' : 'Schoten', c([K2 ? 'save' : 'shot'])],
+    ['Straffen', c(['strafe'])]
+  ].map(([l,n]) => `<div class="st"><b>${n}</b><span>${l}</span></div>`).join('');
+
+  const perOpp = {};
+  S.hist.forEach(game => {
+    if (game.team !== S.team) return;
+    const opp = game.opp || 'Onbekend';
+    if (!perOpp[opp]) perOpp[opp] = {goals:0, assists:0, games:0};
+    perOpp[opp].games++;
+    game.ev.forEach(ev => {
+      if (ev.pid !== p.id) return;
+      if (ev.type === 'goal') perOpp[opp].goals++;
+      if (ev.type === 'assist') perOpp[opp].assists++;
+    });
+  });
+  const rows = Object.entries(perOpp).sort((a,b) => (b[1].goals + b[1].assists) - (a[1].goals + a[1].assists));
+  $('oppStats').innerHTML = rows.length
+    ? rows.map(([opp, st]) => `<div class="ev"><div><b>${esc(opp)}</b><div class="m">${st.games} wedstrijd${st.games>1?'en':''}</div></div><div><b style="color:var(--gold);font-size:18px">${st.goals}G · ${st.assists}A</b></div></div>`).join('')
+    : '<div class="empty">Nog geen afgeronde wedstrijden.</div>';
+}
+
+/* ============================ 15. RACE VIEW ============================ */
+function race(){
+  const m = Popt(S.me), r = Popt(S.rival);
+  let h = '';
+  if (!m){
+    $('race').innerHTML = '<div class="empty">Kies bovenaan eerst je kind.</div>';
+    return;
+  }
+  if (S.won && Popt(S.won.pid)){
+    h += `<div class="win">🏆 ${esc(P(S.won.pid).short)} wint de gouden stick!<div style="font:12px system-ui;text-transform:none">10 doelpunten bereikt op ${esc(S.won.date)}</div></div>`;
+  }
+  [m, r].filter(Boolean).forEach(p => {
+    const n = raceGoals(p.id);
+    h += `<div class="rc">
+      ${renderAvatar(p, 'av')}
+      <div class="rn">#${p.no}</div>
+      <div class="fx">
+        <b>${esc(p.n)}</b>
+        <div class="bar"><i style="width:${Math.min(100, n*10)}%"></i></div>
+        <span class="m">${n >= 10 ? '10 gehaald! 🥇' : 'Nog ' + (10-n) + ' te gaan'}</span>
+      </div>
+      <div class="big">${n}<small>/10</small></div>
+    </div>`;
+  });
+  if (!r) h += '<div class="empty">Kies hierboven een uitdager om de race te starten.</div>';
+  $('race').innerHTML = h;
+}
+
+/* ============================ 16. HISTORY ============================ */
+function hist(){
+  const hs = S.hist.filter(g => g.team === S.team);
+  $('hc').textContent = hs.length + ' wedstrijden';
+
+  const w = hs.filter(g => g.home > g.away).length;
+  const d = hs.filter(g => g.home === g.away).length;
+  const l = hs.filter(g => g.home < g.away).length;
+  $('tot').innerHTML = [
+    ['Winst', w], ['Gelijk', d], ['Verlies', l],
+    ['Doelsaldo', hs.reduce((n, g) => n + g.home - g.away, 0)]
+  ].map(([a,b]) => `<div class="st"><b>${b}</b><span>${a}</span></div>`).join('');
+
+  $('hist').innerHTML = hs.length
+    ? hs.map(g => {
+        const i = S.hist.indexOf(g);
+        return `<div class="day">
+          <div class="hd" style="margin:0"><b>${esc(g.opp || 'Tegenstander')} · ${g.home}–${g.away}</b><span class="m">${esc(g.date)}</span></div>
+          <div class="m">${g.home>g.away?'Winst':g.home===g.away?'Gelijk':'Verlies'}${g.venue ? ' · ' + esc(g.venue) : ''} · ${g.ev.length} acties</div>
+          <div class="row" style="margin-top:8px">
+            <button class="o" onclick="share(${i})">↗ Delen</button>
+            <button class="o" onclick="shareWhatsApp(${i})">💬 WhatsApp</button>
+            <button class="d" onclick="delHist(${i})">Verwijder</button>
+          </div>
+        </div>`;
+      }).join('')
+    : '<div class="empty">Na het afronden verschijnen wedstrijden hier.</div>';
+}
+
+function share(i){
+  const g = S.hist[i];
+  const t = `Tilburg Trappers U11 ${TN()}\n${g.home}–${g.away} tegen ${g.opp||'Tegenstander'}\n${g.date}${g.venue ? ' · ' + g.venue : ''}`;
+  if (navigator.share) navigator.share({text:t}).catch(() => {});
+  else { try { navigator.clipboard.writeText(t); toast('Samenvatting gekopieerd'); } catch(e){ toast('Delen niet beschikbaar'); } }
+}
+
+function shareWhatsApp(i){
+  const g = S.hist[i];
+  const t = encodeURIComponent(`Tilburg Trappers U11 ${TN()}\n${g.home}–${g.away} tegen ${g.opp||'Tegenstander'}\n${g.date}${g.venue ? ' · ' + g.venue : ''}`);
+  window.open('https://wa.me/?text=' + t, '_blank', 'noopener');
+}
+
+async function delHist(i){
+  const g = S.hist[i];
+  const ok = await confirmModal('Wedstrijd verwijderen?', `${g.opp||'Tegenstander'} · ${g.home}–${g.away} van ${g.date}. Dit kan niet ongedaan gemaakt worden.`, 'Verwijder', true);
+  if (!ok) return;
+  S.hist.splice(i, 1);
+  fixWin(); save(); R();
+}
+
+function exportCSV(){
+  const rows = [['Datum','Tegenstander','Locatie','Trappers','Tegenstander','Uitslag','Acties','Speler-ID','Speler','Type','Tijd']];
+  S.hist.filter(g => g.team === S.team).forEach(g => {
+    if (!g.ev.length){
+      rows.push([g.date, g.opp, g.venue, g.home, g.away, g.home>g.away?'W':g.home===g.away?'G':'V', 0, '', '', '', '']);
+    } else {
+      g.ev.forEach(e => {
+        const p = e.pid ? Popt(e.pid) : null;
+        rows.push([g.date, g.opp, g.venue, g.home, g.away, g.home>g.away?'W':g.home===g.away?'G':'V', g.ev.length, e.pid||'', p ? p.n : '', e.type, fmt(e.t)]);
+      });
+    }
+  });
+  const csv = rows.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `trappers-u11-${S.team}-${td()}.csv`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('CSV gedownload');
+}
+
+/* ============================ 17. FINISH / NEW GAME ============================ */
+async function finish(){
+  const g = S.g;
+  if (!hasData(g)){ toast('Nog niets om op te slaan'); return; }
+  const ok = await confirmModal(
+    'Wedstrijd afronden?',
+    `Trappers ${TN()} ${g.home} – ${g.away} ${g.opp || 'Tegenstander'}\n${g.ev.length} acties worden opgeslagen.`,
+    'Afronden'
+  );
+  if (!ok) return;
+  g.run = false;
+  S.hist.unshift({...g, team:S.team, fin:Date.now()});
+  S.hist = S.hist.slice(0, 300);
+  S.g = ng(S.fmt * 60);
+  S.undo = [];
+  save(); R();
+  tab('hist');
+  toast('Wedstrijd opgeslagen');
+}
+
+async function newGame(){
+  if (hasData(S.g)){
+    const ok = await confirmModal('Nieuwe wedstrijd?', 'De huidige wedstrijd wordt NIET opgeslagen.', 'Doorgaan', true);
+    if (!ok) return;
+  }
+  S.g = ng(S.fmt * 60);
+  S.undo = [];
+  save(); R();
+  tab('live');
+}
+
+async function clearHist(){
+  const ok = await confirmModal('Alle historie wissen?', 'Alle afgeronde wedstrijden worden verwijderd. Dit kan niet ongedaan gemaakt worden.', 'Wis alles', true);
+  if (!ok) return;
+  S.hist = [];
+  S.won = null;
+  save(); R();
+  toast('Historie gewist');
+}
+
+/* ============================ 18. SCHEDULE ============================ */
+const map = v => 'https://maps.apple.com/?q=' + encodeURIComponent(v);
+let upOpen = false, paOpen = false;
+
+function done(d){
+  return S.hist.filter(g => g.date === d[0] && g.team === S.team).length;
+}
+
+function oppBtn(i, j){
+  const d = SCH[S.team][i], o = d[3][j];
+  const c = done(d);
+  return `<button class="${c >= 1 ? 'ok' : ''}" onclick="pick(${i},${j})">${c >= 1 ? '✓ ' : ''}${li(o,22)}${esc(o)}</button>`;
+}
+
+function pick(i, j){
+  const d = SCH[S.team][i];
+  if (hasData(S.g)){
+    confirmModal('Nieuwe wedstrijd klaarzetten?', 'De huidige wedstrijd wordt NIET opgeslagen.', 'Doorgaan', true).then(ok => {
+      if (!ok) return;
+      S.g = ng(S.fmt * 60);
+      S.g.opp = d[3][j];
+      S.g.date = d[0];
+      S.g.venue = d[4];
+      S.undo = [];
+      save(); R(); tab('live');
+    });
+    return;
+  }
+  S.g = ng(S.fmt * 60);
+  S.g.opp = d[3][j];
+  S.g.date = d[0];
+  S.g.venue = d[4];
+  S.undo = [];
+  save(); R(); tab('live');
+}
+
+function sched(){
+  const L = SCH[S.team], t = td();
+  const ni = L.findIndex(d => d[0] >= t);
+  let h = '';
+  if (ni >= 0){
+    const d = L[ni];
+    h += `<div class="next">
+      <div class="m" style="color:var(--gold);font-weight:800">VOLGENDE SPEELDAG</div>
+      <div class="t">${esc(d[1])} · ${esc(d[2])}</div>
+      <div style="font-size:14px">📍 ${esc(d[4])} · <a href="${map(d[4])}" target="_blank" rel="noopener">route</a></div>
+      <div class="row" style="margin-top:10px">${d[3].map((_, j) => oppBtn(ni, j)).join('')}</div>
+    </div>`;
+  }
+  $('next').innerHTML = h;
+
+  const row = (d, i) => `<div class="day">
+    <div class="hd" style="margin:0">
+      <b>${esc(d[1])} · ${esc(d[2])}</b>
+      <a href="${map(d[4])}" target="_blank" rel="noopener" class="m">📍 ${esc(d[4])}</a>
+    </div>
+    <div class="row">${d[3].map((_, j) => oppBtn(i, j)).join('')}</div>
+  </div>`;
+
+  const up = L.map((d, i) => [d, i]).filter(([d, i]) => d[0] >= t && i !== ni);
+  const pa = L.map((d, i) => [d, i]).filter(([d]) => d[0] < t);
+
+  $('sched').innerHTML =
+    (up.length ? `<details class="sd" ${upOpen ? 'open' : ''} ontoggle="upOpen=this.open"><summary>Komende speeldagen<span class="m">${up.length} dagen</span></summary>${up.map(([d, i]) => row(d, i)).join('')}</details>` : '') +
+    (pa.length ? `<details class="sd" ${paOpen ? 'open' : ''} ontoggle="paOpen=this.open"><summary>Geweest<span class="m">${pa.length} dagen</span></summary>${pa.map(([d, i]) => row(d, i)).join('')}</details>` : '');
+}
+
+/* ============================ 19. BACKUP ============================ */
+function downloadBk(){
+  const blob = new Blob([JSON.stringify(S, null, 2)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `u11-tracker-backup-${td()}.json`;
+  a.click();
+  URL.revokeObjectURL(a.href);
+  toast('Back-up gedownload');
+}
+
+function copyBk(){
+  const t = JSON.stringify(S);
+  $('bk').value = t;
+  try {
+    navigator.clipboard.writeText(t).then(
+      () => toast('Back-up gekopieerd'),
+      () => { $('bk').select(); toast('Selecteer en kopieer de tekst'); }
+    );
+  } catch(e){ $('bk').select(); toast('Selecteer en kopieer de tekst'); }
+}
+
+function uploadBk(ev){
+  const f = ev.target.files[0];
+  if (!f) return;
+  const r = new FileReader();
+  r.onload = e => {
+    $('bk').value = e.target.result;
+    toast('Bestand geladen — klik Herstel');
+  };
+  r.readAsText(f);
+}
+
+async function restore(){
+  try {
+    const d = JSON.parse($('bk').value);
+    if (!d.g || !Array.isArray(d.hist)) throw 0;
+    const ok = await confirmModal('Back-up herstellen?', 'Alle huidige gegevens op dit toestel worden vervangen.', 'Herstel', true);
+    if (!ok) return;
+    S = {...fresh(), ...d};
+    S.g.run = false;
+    S.g.startedAt = null; S.g.remAtStart = null;
+    S.undo = [];
+    saveNow(); R();
+    toast('Back-up hersteld');
+  } catch(e){
+    toast('Dit is geen geldige back-up');
+  }
+}
+
+/* ============================ 20. THEME & CONFETTI ============================ */
+function toggleTheme(){
+  const cur = document.documentElement.dataset.theme || 'dark';
+  const next = cur === 'dark' ? 'light' : 'dark';
+  document.documentElement.dataset.theme = next;
+  try { localStorage.setItem('u11-theme', next); } catch(e){}
+  const meta = document.querySelector('meta[name="theme-color"]');
+  if (meta) meta.content = next === 'dark' ? '#06122b' : '#1a56b8';
+}
+
+function confetti(){
+  if (matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const c = document.createElement('canvas');
+  c.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;pointer-events:none;z-index:50';
+  c.width = innerWidth; c.height = innerHeight;
+  document.body.appendChild(c);
+  const x = c.getContext('2d'), cl = ['#f6c32b','#1a56b8','#fff','#58dfa1'];
+  const Q = Array.from({length:140}, () => ({
+    x:Math.random()*c.width, y:-20-Math.random()*c.height*.5,
+    vx:(Math.random()-.5)*3, vy:2+Math.random()*4,
+    s:5+Math.random()*7, r:Math.random()*6, vr:(Math.random()-.5)*.3,
+    c:cl[Math.random()*4|0]
+  }));
+  let t = 0;
+  (function f(){
+    x.clearRect(0,0,c.width,c.height);
+    Q.forEach(p => {
+      p.x += p.vx; p.y += p.vy; p.r += p.vr;
+      x.save(); x.translate(p.x,p.y); x.rotate(p.r);
+      x.fillStyle = p.c; x.fillRect(-p.s/2,-p.s/3,p.s,p.s*.6);
+      x.restore();
+    });
+    if (++t < 200) requestAnimationFrame(f); else c.remove();
+  })();
+  if (navigator.vibrate) navigator.vibrate([80,40,80,40,200]);
+}
+
+/* ============================ 21. EVENT LISTENERS ============================ */
+['opp','dt','vn','nt'].forEach(id => $(id).addEventListener('change', () => {
+  const g = S.g;
+  g.opp = $('opp').value;
+  g.date = $('dt').value || td();
+  g.venue = $('vn').value;
+  g.notes = $('nt').value;
+  save(); R();
+}));
+
+$('ghRepo').addEventListener('change', () => {
+  S.ghRepo = $('ghRepo').value.trim();
+  save(); R();
+});
+
+$('team').onchange = async e => {
+  const newTeam = e.target.value;
+  if (hasData(S.g)){
+    const ok = await confirmModal('Van team wisselen?', 'De huidige wedstrijd wordt NIET opgeslagen.', 'Wissel', true);
+    if (!ok){ e.target.value = S.team; return; }
+  }
+  S.team = newTeam;
+  S.me = '';
+  S.rival = '';
+  S.won = null;
+  S.g = ng(S.fmt * 60);
+  S.undo = [];
+  save(); R();
+};
+
+$('me').onchange = e => { S.me = e.target.value; if (S.rival === S.me) S.rival = ''; save(); R(); };$('rv').onchange = e => { S.rival = e.target.value; save(); R(); };
+$('fm').onchange = e => { S.fmt = Number(e.target.value); const g = S.g; if (!g.run && g.len - g.rem === 0){ g.len = g.rem = S.fmt * 60; g.sk = 0; } save(); R(); };$('sg').onchange = e => { S.sig = e.target.checked; save(); R(); };
+$('sn').onchange = e => { S.song = e.target.checked; if (!S.song) stopSong(); save(); };$('pw').onchange = e => { S.pauseOnSig = e.target.checked; save(); };
+
+document.addEventListener('keydown', e => {
+  if (e.target.matches('input,textarea,select')) return;
+  if (e.key === 'g') { openGoalFlow(); }
+  else if (e.key === 'a') { add('assist'); }
+  else if (e.key === 's') { add('shot'); }
+  else if (e.key === ' ') { e.preventDefault(); toggle(); }
+  else if (e.key === 'z' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); undo(); }
+});
+
+/* ============================ 22. INIT ============================ */
+S.g.run = false;
+R();
+</script>
+</body>
+</html>
 
