@@ -9,7 +9,7 @@
     <meta name="description" content="Tilburg Trappers U11 Hockey Tracker" />
     <title>Tilburg Trappers U11 Hockey Tracker</title>
     <link rel="manifest" href="./manifest.json" />
-    <link rel="icon" type="image/svg+xml" href="./icons/icon-192.svg" />
+    <link rel="icon" href="./icons/icon-192.svg" type="image/svg+xml" />
     <link rel="apple-touch-icon" href="./icons/apple-touch-icon.svg" />
     <link rel="stylesheet" href="./styles.css" />
   </head>
@@ -20,23 +20,23 @@
           <div class="logo"><span>Tilburg</span> Trappers</div>
           <div class="subtitle">U11 Hockey Tracker</div>
         </div>
-        <button id="quickAddMatchBtn" class="btn accent" type="button">Nieuw</button>
+        <button id="newMatchBtn" class="btn accent" type="button">Nieuw</button>
       </header>
 
-      <nav class="tabs" aria-label="Navigatie">
-        <button class="tab active" type="button" data-view="schedule">Schema</button>
-        <button class="tab" type="button" data-view="live">Live</button>
-        <button class="tab" type="button" data-view="stats">Stats</button>
-        <button class="tab" type="button" data-view="race">Race 10</button>
-        <button class="tab" type="button" data-view="history">Historie</button>
-        <button class="tab" type="button" data-view="settings">Instellingen</button>
+      <nav class="tabs" aria-label="Tracker-tabs">
+        <button class="tab active" data-view="schedule" type="button">Schema</button>
+        <button class="tab" data-view="live" type="button">Live</button>
+        <button class="tab" data-view="stats" type="button">Stats</button>
+        <button class="tab" data-view="race" type="button">Race 10</button>
+        <button class="tab" data-view="history" type="button">Historie</button>
+        <button class="tab" data-view="settings" type="button">Instellingen</button>
       </nav>
 
       <main class="main-content">
         <section id="scheduleView" class="view active">
           <div class="section-header">
             <h2>Schema</h2>
-            <button id="addScheduleMatchBtn" class="btn small" type="button">Wedstrijd toevoegen</button>
+            <button id="addMatchBtn" class="btn small" type="button">Wedstrijd toevoegen</button>
           </div>
           <div id="scheduleList" class="schedule-list"></div>
         </section>
@@ -49,10 +49,9 @@
 
           <div class="card scoreboard">
             <div class="team-block">
-              <div id="teamHomeName" class="mini-label">Tilburg</div>
+              <div id="homeName" class="mini-label">Tilburg</div>
               <div id="scoreHome" class="score-value">0</div>
             </div>
-
             <div class="middle-block">
               <div id="periodLabel" class="period-label">Periode 1</div>
               <div id="timeLabel" class="time-label">15:00</div>
@@ -63,9 +62,8 @@
                 <button id="nextPeriodBtn" class="btn small secondary" type="button">Volgende</button>
               </div>
             </div>
-
             <div class="team-block">
-              <div id="teamAwayName" class="mini-label">Tegenstander</div>
+              <div id="awayName" class="mini-label">Tegenstander</div>
               <div id="scoreAway" class="score-value">0</div>
             </div>
           </div>
@@ -83,7 +81,7 @@
                 <option value="B">Tegenstander</option>
               </select>
               <input id="eventPlayerInput" type="text" placeholder="Speler" maxlength="25" />
-              <input id="eventMinutesInput" type="number" min="1" max="30" value="2" placeholder="Minuten" />
+              <input id="eventMinutesInput" type="number" min="1" max="30" value="2" />
               <button id="recordEventBtn" class="btn" type="button">Registreer</button>
             </div>
 
@@ -127,7 +125,7 @@
         <section id="settingsView" class="view">
           <div class="section-header">
             <h2>Instellingen</h2>
-            <span class="muted-label">Team en backup</span>
+            <span class="muted-label">Backup en opslag</span>
           </div>
 
           <div class="card settings-card">
@@ -137,10 +135,10 @@
           </div>
 
           <div class="card settings-card">
-            <button id="exportBtn" class="btn secondary" type="button">Exporteer JSON-backup</button>
+            <button id="exportBtn" class="btn secondary" type="button">Exporteer backup</button>
             <label class="upload-label" for="importInput">Importeer JSON</label>
             <input id="importInput" type="file" accept="application/json" />
-            <button id="resetDataBtn" class="btn danger" type="button">Wis alle gegevens</button>
+            <button id="resetDataBtn" class="btn danger" type="button">Wis gegevens</button>
           </div>
 
           <div class="version-row muted-label">Versie: <strong id="versionLabel">1.0.0</strong></div>
@@ -153,8 +151,8 @@
     <script src="./app.js" defer></script>
     <script>
       if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./sw.js').catch(function (error) {
-          console.warn('Service worker registratie mislukt:', error);
+        navigator.serviceWorker.register('./sw.js').catch(function (err) {
+          console.warn('Service worker registratie mislukt:', err);
         });
       }
     </script>

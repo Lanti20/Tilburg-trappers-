@@ -27,7 +27,7 @@ function createDefaultSchedule() {
 
 function buildMatchState(matchId) {
   return {
-    matchId: matchId,
+    matchId,
     scoreA: 0,
     scoreB: 0,
     period: 1,
@@ -43,19 +43,17 @@ function buildMatchState(matchId) {
 function createDefaultState() {
   const schedule = createDefaultSchedule();
   const initialMatchId = schedule[0] ? schedule[0].id : null;
-  const base = {
+  const state = {
     version: '1.0.0',
     teamName: DEFAULT_TEAM_NAME,
-    schedule: schedule,
+    schedule,
     selectedMatchId: initialMatchId,
     history: [],
     matchStates: {},
     appVersion: '1.0.0'
   };
-  if (initialMatchId) {
-    base.matchStates[initialMatchId] = buildMatchState(initialMatchId);
-  }
-  return base;
+  if (initialMatchId) state.matchStates[initialMatchId] = buildMatchState(initialMatchId);
+  return state;
 }
 
 function readState() {
@@ -74,20 +72,13 @@ function readState() {
       matchStates: parsed && parsed.matchStates ? parsed.matchStates : fallback.matchStates,
       appVersion: parsed && parsed.appVersion ? parsed.appVersion : '1.0.0'
     };
-
     merged.schedule.forEach(function (match) {
-      if (!merged.matchStates[match.id]) {
-        merged.matchStates[match.id] = buildMatchState(match.id);
-      }
+      if (!merged.matchStates[match.id]) merged.matchStates[match.id] = buildMatchState(match.id);
     });
-
-    if (!merged.selectedMatchId && merged.schedule.length) {
-      merged.selectedMatchId = merged.schedule[0].id;
-    }
-
+    if (!merged.selectedMatchId && merged.schedule.length) merged.selectedMatchId = merged.schedule[0].id;
     return merged;
   } catch (error) {
-    console.warn('Laden uit localStorage mislukte, standaardwaarden worden gebruikt:', error);
+    console.warn('Laden uit localStorage mislukt, standaardwaarden worden gebruikt:', error);
     return createDefaultState();
   }
 }
@@ -103,8 +94,8 @@ const ui = {
   scoreAway: document.getElementById('scoreAway'),
   periodLabel: document.getElementById('periodLabel'),
   timeLabel: document.getElementById('timeLabel'),
-  teamHomeName: document.getElementById('teamHomeName'),
-  teamAwayName: document.getElementById('teamAwayName'),
+  homeName: document.getElementById('homeName'),
+  awayName: document.getElementById('awayName'),
   eventTypeInput: document.getElementById('eventTypeInput'),
   eventTeamInput: document.getElementById('eventTeamInput'),
   eventPlayerInput: document.getElementById('eventPlayerInput'),
@@ -117,8 +108,8 @@ const ui = {
   nextPeriodBtn: document.getElementById('nextPeriodBtn'),
   endMatchBtn: document.getElementById('endMatchBtn'),
   undoLastBtn: document.getElementById('undoLastBtn'),
-  addScheduleMatchBtn: document.getElementById('addScheduleMatchBtn'),
-  quickAddMatchBtn: document.getElementById('quickAddMatchBtn'),
+  addMatchBtn: document.getElementById('addMatchBtn'),
+  newMatchBtn: document.getElementById('newMatchBtn'),
   statsSummary: document.getElementById('statsSummary'),
   statsTable: document.getElementById('statsTable'),
   racePanel: document.getElementById('racePanel'),
@@ -146,28 +137,24 @@ function showToast(message) {
 }
 
 function formatClock(seconds) {
-  const totalSeconds = Math.max(0, Number(seconds) || 0);
-  const minutes = String(Math.floor(totalSeconds / 60)).padStart(2, '0');
-  const secs = String(totalSeconds % 60).padStart(2, '0');
+  const total = Math.max(0, Number(seconds) || 0);
+  const minutes = String(Math.floor(total / 60)).padStart(2, '0');
+  const secs = String(total % 60).padStart(2, '0');
   return minutes + ':' + secs;
 }
 
 function getSelectedMatch() {
-  if (!state.selectedMatchId && state.schedule.length) {
-    state.selectedMatchId = state.schedule[0].id;
-  }
+  if (!state.selectedMatchId && state.schedule.length) state.selectedMatchId = state.schedule[0].id;
   return state.schedule.find(function (match) {
     return match.id === state.selectedMatchId;
   }) || (state.schedule[0] || null);
 }
 
 function getSelectedLiveState() {
-  const selectedMatch = getSelectedMatch();
-  if (!selectedMatch) return null;
-  if (!state.matchStates[selectedMatch.id]) {
-    state.matchStates[selectedMatch.id] = buildMatchState(selectedMatch.id);
-  }
-  return state.matchStates[selectedMatch.id];
+  const match = getSelectedMatch();
+  if (!match) return null;
+  if (!state.matchStates[match.id]) state.matchStates[match.id] = buildMatchState(match.id);
+  return state.matchStates[match.id];
 }
 
 function getTeamName() {
@@ -210,14 +197,12 @@ function renderSchedule() {
         return item.id === button.getAttribute('data-match-id');
       });
       if (!match) return;
-
       const newDate = prompt('Datum voor de wedstrijd:', match.date || '');
       if (newDate === null) return;
       const newOpponent = prompt('Tegenstander:', match.opponent || '');
       if (newOpponent === null) return;
       const newVenue = prompt('Locatie / thuis-uit:', match.venue || 'Thuis');
       if (newVenue === null) return;
-
       match.date = (newDate || match.date).trim();
       match.opponent = (newOpponent || match.opponent).trim();
       match.venue = (newVenue || match.venue).trim();
@@ -234,11 +219,9 @@ function renderLive() {
     ui.liveMatchLabel.textContent = 'Geen wedstrijd';
     return;
   }
-
-  const awayName = selectedMatch.opponent || 'Tegenstander';
-  ui.teamHomeName.textContent = getTeamName();
-  ui.teamAwayName.textContent = awayName;
-  ui.liveMatchLabel.textContent = selectedMatch.date + ' • ' + selectedMatch.venue + ' • ' + awayName;
+  ui.homeName.textContent = getTeamName();
+  ui.awayName.textContent = selectedMatch.opponent || 'Tegenstander';
+  ui.liveMatchLabel.textContent = selectedMatch.date + ' • ' + selectedMatch.venue + ' • ' + (selectedMatch.opponent || 'Tegenstander');
   ui.scoreHome.textContent = String(liveState.scoreA || 0);
   ui.scoreAway.textContent = String(liveState.scoreB || 0);
   ui.periodLabel.textContent = 'Periode ' + (liveState.period || 1);
@@ -252,8 +235,7 @@ function renderLive() {
 
 function startClock() {
   const live = getSelectedLiveState();
-  if (!live) return;
-  if (live.running) return;
+  if (!live || live.running) return;
   live.running = true;
   clearInterval(live.timerId);
   live.timerId = setInterval(function () {
@@ -308,7 +290,6 @@ function setPlayerStat(player, team, type, minutes) {
   const safePlayer = (player || 'Onbekend').trim() || 'Onbekend';
   const current = live.playerStats[safePlayer] || { team: team || 'Tilburg', goals: 0, assists: 0, shots: 0, penaltyMinutes: 0 };
   current.team = team || current.team;
-
   if (type === 'goal') current.goals += 1;
   if (type === 'assist') current.assists += 1;
   if (type === 'shot') current.shots += 1;
@@ -318,34 +299,28 @@ function setPlayerStat(player, team, type, minutes) {
 
 function recordEvent() {
   const live = getSelectedLiveState();
-  if (!live) {
+  const match = getSelectedMatch();
+  if (!live || !match) {
     showToast('Selecteer eerst een wedstrijd.');
     return;
   }
 
-  const eventType = ui.eventTypeInput.value;
-  const teamValue = ui.eventTeamInput.value;
+  const type = ui.eventTypeInput.value;
+  const team = ui.eventTeamInput.value;
   const playerName = (ui.eventPlayerInput.value || 'Onbekend').trim() || 'Onbekend';
   const minutes = Number(ui.eventMinutesInput.value || 0);
 
-  if (eventType === 'goal') {
-    if (teamValue === 'A') live.scoreA += 1; else live.scoreB += 1;
+  if (type === 'goal') {
+    if (team === 'A') live.scoreA += 1; else live.scoreB += 1;
   }
 
-  const timeStamp = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  const teamLabel = teamValue === 'A' ? getTeamName() : (getSelectedMatch() ? getSelectedMatch().opponent : 'Tegenstander');
-  const typeLabel = eventType === 'goal' ? 'Doelpunt' : eventType === 'assist' ? 'Assist' : eventType === 'shot' ? 'Schot' : 'Strafminuten (' + minutes + ' min)';
+  const label = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' • ' + (team === 'A' ? getTeamName() : match.opponent) + ' • ' + playerName + ' • ' + (
+    type === 'goal' ? 'Doelpunt' : type === 'assist' ? 'Assist' : type === 'shot' ? 'Schot' : 'Strafminuten (' + minutes + ' min)'
+  );
 
-  const entry = {
-    type: eventType,
-    team: teamValue,
-    player: playerName,
-    minutes: minutes,
-    label: timeStamp + ' • ' + teamLabel + ' • ' + playerName + ' • ' + typeLabel
-  };
+  live.log.push({ type, team, player: playerName, minutes, label });
+  setPlayerStat(playerName, team === 'A' ? getTeamName() : match.opponent, type, minutes);
 
-  live.log.push(entry);
-  setPlayerStat(playerName, teamLabel, eventType, minutes);
   ui.eventPlayerInput.value = '';
   ui.eventMinutesInput.value = '2';
 
@@ -370,17 +345,14 @@ function undoLastEvent() {
     else live.scoreB = Math.max(0, live.scoreB - 1);
   }
 
-  if (last.player) {
-    const stats = live.playerStats[last.player];
-    if (stats) {
-      if (last.type === 'goal') stats.goals = Math.max(0, stats.goals - 1);
-      if (last.type === 'assist') stats.assists = Math.max(0, stats.assists - 1);
-      if (last.type === 'shot') stats.shots = Math.max(0, stats.shots - 1);
-      if (last.type === 'penalty') stats.penaltyMinutes = Math.max(0, stats.penaltyMinutes - Number(last.minutes || 0));
-      if (!stats.goals && !stats.assists && !stats.shots && !stats.penaltyMinutes) {
-        delete live.playerStats[last.player];
-      }
-    }
+  const playerName = last.player || 'Onbekend';
+  const stats = live.playerStats[playerName];
+  if (stats) {
+    if (last.type === 'goal') stats.goals = Math.max(0, stats.goals - 1);
+    if (last.type === 'assist') stats.assists = Math.max(0, stats.assists - 1);
+    if (last.type === 'shot') stats.shots = Math.max(0, stats.shots - 1);
+    if (last.type === 'penalty') stats.penaltyMinutes = Math.max(0, stats.penaltyMinutes - Number(last.minutes || 0));
+    if (!stats.goals && !stats.assists && !stats.shots && !stats.penaltyMinutes) delete live.playerStats[playerName];
   }
 
   renderLive();
@@ -390,13 +362,9 @@ function undoLastEvent() {
 }
 
 function getSummaryStats() {
-  const openMatch = getSelectedLiveState();
   const history = state.history || [];
-  let wins = 0;
-  let losses = 0;
-  let draws = 0;
-  let goalsFor = 0;
-  let goalsAgainst = 0;
+  const live = getSelectedLiveState();
+  let wins = 0, losses = 0, draws = 0, goalsFor = 0, goalsAgainst = 0;
 
   history.forEach(function (match) {
     goalsFor += Number(match.scoreA || 0);
@@ -406,51 +374,41 @@ function getSummaryStats() {
     else draws += 1;
   });
 
-  if (openMatch) {
-    goalsFor += Number(openMatch.scoreA || 0);
-    goalsAgainst += Number(openMatch.scoreB || 0);
+  if (live) {
+    goalsFor += Number(live.scoreA || 0);
+    goalsAgainst += Number(live.scoreB || 0);
   }
 
-  return {
-    played: history.length,
-    wins: wins,
-    losses: losses,
-    draws: draws,
-    goalsFor: goalsFor,
-    goalsAgainst: goalsAgainst
-  };
+  return { played: history.length, wins, losses, draws, goalsFor, goalsAgainst };
 }
 
 function buildPlayerTableData() {
   const map = {};
-
-  function add(name, stat) {
+  function addPlayer(name, stats) {
     const clean = (name || 'Onbekend').trim() || 'Onbekend';
-    if (!map[clean]) {
-      map[clean] = { goals: 0, assists: 0, shots: 0, penaltyMinutes: 0 };
-    }
-    map[clean].goals += Number(stat.goals || 0);
-    map[clean].assists += Number(stat.assists || 0);
-    map[clean].shots += Number(stat.shots || 0);
-    map[clean].penaltyMinutes += Number(stat.penaltyMinutes || 0);
+    if (!map[clean]) map[clean] = { goals: 0, assists: 0, shots: 0, penaltyMinutes: 0 };
+    map[clean].goals += Number(stats.goals || 0);
+    map[clean].assists += Number(stats.assists || 0);
+    map[clean].shots += Number(stats.shots || 0);
+    map[clean].penaltyMinutes += Number(stats.penaltyMinutes || 0);
   }
 
   (state.history || []).forEach(function (match) {
     if (!match.playerStats) return;
     Object.keys(match.playerStats).forEach(function (player) {
-      add(player, match.playerStats[player]);
+      addPlayer(player, match.playerStats[player]);
     });
   });
 
   const live = getSelectedLiveState();
   if (live && live.playerStats) {
     Object.keys(live.playerStats).forEach(function (player) {
-      add(player, live.playerStats[player]);
+      addPlayer(player, live.playerStats[player]);
     });
   }
 
   return Object.keys(map).map(function (player) {
-    return { player: player, ...map[player] };
+    return { player, ...map[player] };
   }).sort(function (a, b) {
     return (b.goals + b.assists) - (a.goals + a.assists);
   });
@@ -493,6 +451,45 @@ function renderStats() {
   `;
 }
 
+function buildRaceData() {
+  const map = {};
+  function add(player, goals) {
+    const clean = (player || 'Onbekend').trim() || 'Onbekend';
+    map[clean] = (map[clean] || 0) + Number(goals || 0);
+  }
+
+  (state.history || []).forEach(function (match) {
+    if (!match.playerStats) return;
+    Object.keys(match.playerStats).forEach(function (player) {
+      add(player, match.playerStats[player].goals || 0);
+    });
+  });
+
+  const live = getSelectedLiveState();
+  if (live && live.playerStats) {
+    Object.keys(live.playerStats).forEach(function (player) {
+      add(player, live.playerStats[player].goals || 0);
+    });
+  }
+
+  const list = Object.keys(map).map(function (name) {
+    return { player: name, goals: map[name] };
+  }).sort(function (a, b) {
+    return b.goals - a.goals;
+  });
+
+  const jayIndex = list.findIndex(function (item) {
+    return item.player.toLowerCase().indexOf('jay') !== -1 || item.player.indexOf('#45') !== -1;
+  });
+
+  if (jayIndex >= 0) {
+    const jayEntry = list.splice(jayIndex, 1)[0];
+    list.unshift(jayEntry);
+  }
+
+  return list.slice(0, 5);
+}
+
 function renderRace() {
   const data = buildRaceData();
   if (!data.length) {
@@ -501,11 +498,12 @@ function renderRace() {
   }
 
   const max = Math.max(TARGET_SCORE, ...data.map(function (item) { return Number(item.goals || 0); }));
+
   ui.racePanel.innerHTML = data.map(function (item, index) {
     const goals = Number(item.goals || 0);
     const pct = Math.max(6, Math.min(100, (goals / max) * 100));
     const status = goals >= TARGET_SCORE ? 'Doel bereikt!' : goals + '/' + TARGET_SCORE;
-    const label = item.player && item.player.toLowerCase().indexOf('jay') !== -1 ? 'Jay-Jay (#45)' : item.player;
+    const label = item.player && (item.player.toLowerCase().indexOf('jay') !== -1 || item.player.indexOf('#45') !== -1) ? 'Jay-Jay (#45)' : item.player;
     return `
       <div class="race-item">
         <div class="race-top">
@@ -517,47 +515,12 @@ function renderRace() {
     `;
   }).join('');
 
-  const jayGoal = data.find(function (item) {
+  const jay = data.find(function (item) {
     return item.player && (item.player.toLowerCase().indexOf('jay') !== -1 || item.player.indexOf('#45') !== -1);
   });
-  if (jayGoal && Number(jayGoal.goals || 0) >= TARGET_SCORE) {
+  if (jay && Number(jay.goals || 0) >= TARGET_SCORE) {
     showToast('Jay-Jay heeft de 10 doelpunten bereikt!');
   }
-}
-
-function buildRaceData() {
-  const map = {};
-
-  function addPlayerData(player, goals) {
-    const clean = (player || 'Onbekend').trim() || 'Onbekend';
-    map[clean] = (map[clean] || 0) + Number(goals || 0);
-  }
-
-  (state.history || []).forEach(function (match) {
-    if (!match.playerStats) return;
-    Object.keys(match.playerStats).forEach(function (player) {
-      addPlayerData(player, match.playerStats[player].goals || 0);
-    });
-  });
-
-  const live = getSelectedLiveState();
-  if (live && live.playerStats) {
-    Object.keys(live.playerStats).forEach(function (player) {
-      addPlayerData(player, live.playerStats[player].goals || 0);
-    });
-  }
-
-  const list = Object.keys(map).map(function (name) {
-    return { player: name, goals: map[name] };
-  }).sort(function (a, b) { return b.goals - a.goals; });
-
-  const jayMatch = list.find(function (item) {
-    return item.player.toLowerCase().indexOf('jay') !== -1 || item.player.indexOf('#45') !== -1;
-  });
-  if (jayMatch) {
-    return [jayMatch].concat(list.filter(function (item) { return item.player !== jayMatch.player; })).slice(0, 5);
-  }
-  return list.slice(0, 5);
 }
 
 function renderHistory() {
@@ -566,7 +529,6 @@ function renderHistory() {
     ui.historyList.innerHTML = '<div class="history-item"><h3>Geen afgeronde wedstrijden</h3><p>Er zijn nog geen wedstrijdresultaten opgeslagen.</p></div>';
     return;
   }
-
   ui.historyList.innerHTML = history.slice().reverse().map(function (match) {
     return `
       <div class="history-item">
@@ -596,15 +558,14 @@ function importData(file) {
   reader.onload = function () {
     try {
       const parsed = JSON.parse(reader.result);
-      const merged = {
+      state = {
         ...createDefaultState(),
         ...parsed,
+        teamName: parsed.teamName || DEFAULT_TEAM_NAME,
         schedule: Array.isArray(parsed.schedule) && parsed.schedule.length ? parsed.schedule : createDefaultState().schedule,
         history: Array.isArray(parsed.history) ? parsed.history : [],
-        matchStates: parsed.matchStates || createDefaultState().matchStates,
-        teamName: parsed.teamName || DEFAULT_TEAM_NAME
+        matchStates: parsed.matchStates || createDefaultState().matchStates
       };
-      state = merged;
       saveState();
       renderAll();
       showToast('JSON geïmporteerd.');
@@ -626,8 +587,7 @@ function clearAllData() {
 }
 
 function saveTeamName() {
-  const value = (ui.teamNameInput.value || '').trim();
-  state.teamName = value || DEFAULT_TEAM_NAME;
+  state.teamName = (ui.teamNameInput.value || '').trim() || DEFAULT_TEAM_NAME;
   saveState();
   renderAll();
   showToast('Teamnaam opgeslagen.');
@@ -643,7 +603,7 @@ function addScheduleMatch() {
 
   const id = 'day-' + String(Date.now()).slice(-6);
   const newMatch = {
-    id: id,
+    id,
     date: (date || 'Onbekend').trim(),
     opponent: (opponent || 'Tegenstander').trim(),
     venue: (venue || 'Thuis').trim(),
@@ -685,14 +645,14 @@ function setActiveView(viewName) {
     view.classList.toggle('active', view.id === viewName + 'View');
   });
   ui.tabs.forEach(function (tab) {
-    tab.classList.toggle('active', tab.getAttribute('data-view') === viewName);
+    tab.classList.toggle('active', tab.dataset.view === viewName);
   });
 }
 
 function bindEvents() {
   ui.tabs.forEach(function (tab) {
     tab.addEventListener('click', function () {
-      setActiveView(tab.getAttribute('data-view'));
+      setActiveView(tab.dataset.view);
     });
   });
 
@@ -703,8 +663,8 @@ function bindEvents() {
   ui.recordEventBtn.addEventListener('click', recordEvent);
   ui.undoLastBtn.addEventListener('click', undoLastEvent);
   ui.endMatchBtn.addEventListener('click', endCurrentMatch);
-  ui.addScheduleMatchBtn.addEventListener('click', addScheduleMatch);
-  ui.quickAddMatchBtn.addEventListener('click', addScheduleMatch);
+  ui.addMatchBtn.addEventListener('click', addScheduleMatch);
+  ui.newMatchBtn.addEventListener('click', addScheduleMatch);
   ui.exportBtn.addEventListener('click', exportData);
   ui.importInput.addEventListener('change', function (event) {
     const file = event.target.files && event.target.files[0];
