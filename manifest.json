@@ -1,0 +1,739 @@
+const STORAGE_KEY = 'u11-hockey-tracker-v1';
+const TARGET_SCORE = 10;
+const DEFAULT_TEAM_NAME = 'Tilburg Trappers U11';
+
+function buildDefaultSchedule() {
+  return [
+    { id: 'day-1', date: '12 sep 2026', opponent: 'Aalsmeer', venue: 'Thuis', status: 'In planning' },
+    { id: 'day-2', date: '19 sep 2026', opponent: 'Dordrecht', venue: 'Uit', status: 'In planning' },
+    { id: 'day-3', date: '26 sep 2026', opponent: 'Eindhoven', venue: 'Thuis', status: 'In planning' },
+    { id: 'day-4', date: '3 okt 2026', opponent: 'Groningen', venue: 'Uit', status: 'In planning' },
+    { id: 'day-5', date: '10 okt 2026', opponent: 'Haarlem', venue: 'Thuis', status: 'In planning' },
+    { id: 'day-6', date: '17 okt 2026', opponent: 'IJmuiden', venue: 'Uit', status: 'In planning' },
+    { id: 'day-7', date: '24 okt 2026', opponent: 'Kampen', venue: 'Thuis', status: 'In planning' },
+    { id: 'day-8', date: '31 okt 2026', opponent: 'Lelystad', venue: 'Uit', status: 'In planning' },
+    { id: 'day-9', date: '7 nov 2026', opponent: 'Maastricht', venue: 'Thuis', status: 'In planning' },
+    { id: 'day-10', date: '14 nov 2026', opponent: 'Nijmegen', venue: 'Uit', status: 'In planning' },
+    { id: 'day-11', date: '21 nov 2026', opponent: 'Oss', venue: 'Thuis', status: 'In planning' },
+    { id: 'day-12', date: '28 nov 2026', opponent: 'Pijnacker', venue: 'Uit', status: 'In planning' },
+    { id: 'day-13', date: '5 dec 2026', opponent: 'Rotterdam', venue: 'Thuis', status: 'In planning' },
+    { id: 'day-14', date: '12 dec 2026', opponent: 'Sittard', venue: 'Uit', status: 'In planning' },
+    { id: 'day-15', date: '19 dec 2026', opponent: 'Tilburg II', venue: 'Thuis', status: 'In planning' },
+    { id: 'day-16', date: '9 jan 2027', opponent: 'Utrecht', venue: 'Uit', status: 'In planning' },
+    { id: 'day-17', date: '16 jan 2027', opponent: 'Venlo', venue: 'Thuis', status: 'In planning' }
+  ];
+}
+
+function buildMatchState(matchId) {
+  return {
+    matchId: matchId,
+    scoreA: 0,
+    scoreB: 0,
+    period: 1,
+    clockSeconds: 15 * 60,
+    running: false,
+    log: [],
+    playerStats: {},
+    timerId: null,
+    opponentName: 'Tegenstander'
+  };
+}
+
+function createDefaultState() {
+  const schedule = buildDefaultSchedule();
+  const initialMatchId = schedule[0] ? schedule[0].id : null;
+  const state = {
+    version: '1.0.0',
+    teamName: DEFAULT_TEAM_NAME,
+    schedule: schedule,
+    selectedMatchId: initialMatchId,
+    history: [],
+    matchStates: {},
+    appVersion: '1.0.0'
+  };
+
+  if (initialMatchId) {
+    state.matchStates[initialMatchId] = buildMatchState(initialMatchId);
+  }
+  return state;
+}
+
+function readState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return createDefaultState();
+    const parsed = JSON.parse(raw);
+    const base = createDefaultState();
+    const merged = {
+      ...base,
+      ...parsed,
+      teamName: (parsed && parsed.teamName) ? parsed.teamName : base.teamName,
+      schedule: Array.isArray(parsed.schedule) && parsed.schedule.length ? parsed.schedule : base.schedule,
+      selectedMatchId: (parsed && parsed.selectedMatchId) ? parsed.selectedMatchId : base.selectedMatchId,
+      history: Array.isArray(parsed.history) ? parsed.history : [],
+      matchStates: parsed && parsed.matchStates ? parsed.matchStates : base.matchStates,
+      appVersion: parsed && parsed.appVersion ? parsed.appVersion : '1.0.0'
+    };
+
+    merged.schedule.forEach(function (match) {
+      if (!merged.matchStates[match.id]) {
+        merged.matchStates[match.id] = buildMatchState(match.id);
+      }
+    });
+    if (!merged.selectedMatchId && merged.schedule.length) {
+      merged.selectedMatchId = merged.schedule[0].id;
+    }
+    return merged;
+  } catch (error) {
+    console.warn('Laden uit localStorage mislukte, standaardwaarden worden gebruikt:', error);
+    return createDefaultState();
+  }
+}
+
+let state = readState();
+
+const ui = {
+  tabs: Array.from(document.querySelectorAll('.tab')),
+  views: Array.from(document.querySelectorAll('.view')),
+  scheduleList: document.getElementById('scheduleList'),
+  liveMatchLabel: document.getElementById('liveMatchLabel'),
+  scoreHome: document.getElementById('scoreHome'),
+  scoreAway: document.getElementById('scoreAway'),
+  periodLabel: document.getElementById('periodLabel'),
+  timeLabel: document.getElementById('timeLabel'),
+  teamAwayName: document.getElementById('teamAwayName'),
+  eventTypeInput: document.getElementById('eventTypeInput'),
+  eventTeamInput: document.getElementById('eventTeamInput'),
+  eventPlayerInput: document.getElementById('eventPlayerInput'),
+  eventMinutesInput: document.getElementById('eventMinutesInput'),
+  recordEventBtn: document.getElementById('recordEventBtn'),
+  eventLog: document.getElementById('eventLog'),
+  startClockBtn: document.getElementById('startClockBtn'),
+  pauseClockBtn: document.getElementById('pauseClockBtn'),
+  resetClockBtn: document.getElementById('resetClockBtn'),
+  nextPeriodBtn: document.getElementById('nextPeriodBtn'),
+  endMatchBtn: document.getElementById('endMatchBtn'),
+  undoLastBtn: document.getElementById('undoLastBtn'),
+  addScheduleMatchBtn: document.getElementById('addScheduleMatchBtn'),
+  quickAddMatchBtn: document.getElementById('quickAddMatchBtn'),
+  statsSummary: document.getElementById('statsSummary'),
+  statsTable: document.getElementById('statsTable'),
+  racePanel: document.getElementById('racePanel'),
+  historyList: document.getElementById('historyList'),
+  exportBtn: document.getElementById('exportBtn'),
+  importInput: document.getElementById('importInput'),
+  resetDataBtn: document.getElementById('resetDataBtn'),
+  teamNameInput: document.getElementById('teamNameInput'),
+  saveTeamBtn: document.getElementById('saveTeamBtn'),
+  versionLabel: document.getElementById('versionLabel'),
+  toast: document.getElementById('toast')
+};
+
+function saveState() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function showToast(message) {
+  ui.toast.textContent = message;
+  ui.toast.classList.add('visible');
+  clearTimeout(showToast.t);
+  showToast.t = setTimeout(function () {
+    ui.toast.classList.remove('visible');
+  }, 1800);
+}
+
+function getSelectedMatch() {
+  if (!state.selectedMatchId) {
+    state.selectedMatchId = state.schedule[0] ? state.schedule[0].id : null;
+  }
+  return state.schedule.find(function (match) {
+    return match.id === state.selectedMatchId;
+  }) || (state.schedule[0] || null);
+}
+
+function getSelectedLiveState() {
+  const selectedMatchId = getSelectedMatch() ? getSelectedMatch().id : null;
+  if (!selectedMatchId) return null;
+  if (!state.matchStates[selectedMatchId]) {
+    state.matchStates[selectedMatchId] = buildMatchState(selectedMatchId);
+  }
+  return state.matchStates[selectedMatchId];
+}
+
+function formatClock(seconds) {
+  const minutes = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return String(minutes).padStart(2, '0') + ':' + String(secs).padStart(2, '0');
+}
+
+function getOpponentLabel(match) {
+  if (!match) return 'Tegenstander';
+  return match.opponent || 'Tegenstander';
+}
+
+function renderSchedule() {
+  const matches = state.schedule || [];
+  ui.scheduleList.innerHTML = matches.map(function (match) {
+    const status = match.status || 'In planning';
+    const isSelected = match.id === state.selectedMatchId;
+    return `
+      <div class="schedule-item ${isSelected ? 'selected' : ''}">
+        <div class="schedule-top">
+          <div class="schedule-date">${match.date}</div>
+          <span class="schedule-status">${status}</span>
+        </div>
+        <div class="schedule-meta">
+          <div><strong>${match.opponent}</strong></div>
+          <div>${match.venue}</div>
+        </div>
+        <div class="schedule-actions">
+          <button class="btn small" type="button" data-action="select-match" data-match-id="${match.id}">Open</button>
+          <button class="btn small secondary" type="button" data-action="edit-match" data-match-id="${match.id}">Bewerk</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  ui.scheduleList.querySelectorAll('[data-action="select-match"]').forEach(function (button) {
+    button.addEventListener('click', function () {
+      state.selectedMatchId = button.getAttribute('data-match-id');
+      saveState();
+      renderAll();
+    });
+  });
+
+  ui.scheduleList.querySelectorAll('[data-action="edit-match"]').forEach(function (button) {
+    button.addEventListener('click', function () {
+      const id = button.getAttribute('data-match-id');
+      const match = state.schedule.find(function (item) { return item.id === id; });
+      if (!match) return;
+      const newDate = prompt('Datum van de wedstrijd:', match.date || '');
+      if (newDate === null) return;
+      const newOpponent = prompt('Tegenstander:', match.opponent || '');
+      if (newOpponent === null) return;
+      const newVenue = prompt('Locatie / thuis-uit:', match.venue || 'Thuis');
+      if (newVenue === null) return;
+      match.date = newDate.trim() || match.date;
+      match.opponent = newOpponent.trim() || match.opponent;
+      match.venue = newVenue.trim() || match.venue;
+      saveState();
+      renderAll();
+    });
+  });
+}
+
+function renderLive() {
+  const selectedMatch = getSelectedMatch();
+  const liveState = getSelectedLiveState();
+  if (!selectedMatch || !liveState) {
+    ui.liveMatchLabel.textContent = 'Geen wedstrijd';
+    return;
+  }
+
+  const opponentName = getOpponentLabel(selectedMatch);
+  const teamAwayName = opponentName || 'Tegenstander';
+  ui.teamAwayName.textContent = teamAwayName;
+  ui.liveMatchLabel.textContent = selectedMatch.date + ' • ' + selectedMatch.venue + ' • ' + opponentName;
+  ui.scoreHome.textContent = String(liveState.scoreA || 0);
+  ui.scoreAway.textContent = String(liveState.scoreB || 0);
+  ui.periodLabel.textContent = 'Periode ' + (liveState.period || 1);
+  ui.timeLabel.textContent = formatClock(liveState.clockSeconds || 15 * 60);
+
+  const log = (liveState.log || []).slice().reverse();
+  ui.eventLog.innerHTML = log.length ? log.map(function (item) {
+    return '<div class="event-item">' + item.label + '</div>';
+  }).join('') : '<div class="event-item">Nog geen gebeurtenissen geregistreerd.</div>';
+}
+
+function startClock() {
+  const live = getSelectedLiveState();
+  if (!live) return;
+  if (live.running) return;
+  live.running = true;
+  clearInterval(live.timerId);
+  live.timerId = setInterval(function () {
+    if (!live.running) return;
+    if (live.clockSeconds <= 0) {
+      live.running = false;
+      clearInterval(live.timerId);
+      live.timerId = null;
+      saveState();
+      renderLive();
+      return;
+    }
+    live.clockSeconds -= 1;
+    renderLive();
+    saveState();
+  }, 1000);
+  renderLive();
+  saveState();
+}
+
+function pauseClock() {
+  const live = getSelectedLiveState();
+  if (!live) return;
+  live.running = false;
+  clearInterval(live.timerId);
+  live.timerId = null;
+  renderLive();
+  saveState();
+}
+
+function resetClock() {
+  const live = getSelectedLiveState();
+  if (!live) return;
+  pauseClock();
+  live.clockSeconds = 15 * 60;
+  renderLive();
+  saveState();
+}
+
+function nextPeriod() {
+  const live = getSelectedLiveState();
+  if (!live) return;
+  live.period = Math.min((live.period || 1) + 1, 3);
+  live.clockSeconds = 15 * 60;
+  renderLive();
+  saveState();
+}
+
+function getPlayerStats() {
+  const live = getSelectedLiveState();
+  const stats = {};
+  const addPlayer = function (name, team, type, minutes) {
+    const cleanName = (name || 'Onbekend').trim() || 'Onbekend';
+    if (!stats[cleanName]) {
+      stats[cleanName] = { team: team || 'Tilburg', goals: 0, assists: 0, shots: 0, penaltyMinutes: 0, games: 0 };
+    }
+    if (type === 'goal') stats[cleanName].goals += 1;
+    if (type === 'assist') stats[cleanName].assists += 1;
+    if (type === 'shot') stats[cleanName].shots += 1;
+    if (type === 'penalty') stats[cleanName].penaltyMinutes += Number(minutes || 0);
+    stats[cleanName].team = team || stats[cleanName].team;
+  };
+
+  if (live && live.playerStats) {
+    Object.keys(live.playerStats).forEach(function (name) {
+      const values = live.playerStats[name];
+      addPlayer(name, values.team, 'goal', 0);
+      addPlayer(name, values.team, 'assist', 0);
+      addPlayer(name, values.team, 'shot', 0);
+      addPlayer(name, values.team, 'penalty', values.penaltyMinutes || 0);
+    });
+  }
+
+  (live && live.log || []).forEach(function (entry) {
+    if (!entry || !entry.player) return;
+    addPlayer(entry.player, entry.team === 'A' ? 'Tilburg' : 'Tegenstander', entry.type, entry.minutes || 0);
+  });
+  return stats;
+}
+
+function setPlayerStat(player, team, type, minutes) {
+  const live = getSelectedLiveState();
+  if (!live) return;
+  const safePlayer = (player || 'Onbekend').trim() || 'Onbekend';
+  const current = live.playerStats[safePlayer] || { team: team || 'Tilburg', goals: 0, assists: 0, shots: 0, penaltyMinutes: 0 };
+  current.team = team || current.team;
+  if (type === 'goal') current.goals += 1;
+  if (type === 'assist') current.assists += 1;
+  if (type === 'shot') current.shots += 1;
+  if (type === 'penalty') current.penaltyMinutes += Number(minutes || 0);
+  live.playerStats[safePlayer] = current;
+}
+
+function recordEvent() {
+  const live = getSelectedLiveState();
+  if (!live) {
+    showToast('Selecteer eerst een wedstrijd.');
+    return;
+  }
+
+  const type = ui.eventTypeInput.value;
+  const team = ui.eventTeamInput.value;
+  const playerName = (ui.eventPlayerInput.value || 'Onbekend').trim() || 'Onbekend';
+  const minutes = Number(ui.eventMinutesInput.value || 0);
+
+  if (type === 'goal') {
+    if (team === 'A') live.scoreA += 1; else live.scoreB += 1;
+  }
+
+  const label = `${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} • ${team === 'A' ? 'Tilburg' : 'Tegenstander'} • ${playerName} • ${type === 'goal' ? 'Doelpunt' : type === 'assist' ? 'Assist' : type === 'shot' ? 'Schot' : 'Strafminuten (' + minutes + ' min)'}`;
+
+  const entry = { type: type, team: team, player: playerName, minutes: minutes, label: label };
+  live.log.push(entry);
+  setPlayerStat(playerName, team === 'A' ? 'Tilburg' : 'Tegenstander', type, minutes);
+
+  ui.eventPlayerInput.value = '';
+  ui.eventMinutesInput.value = '2';
+  renderLive();
+  renderStats();
+  renderRace();
+  saveState();
+}
+
+function undoLastEvent() {
+  const live = getSelectedLiveState();
+  if (!live || !live.log.length) {
+    showToast('Er is niets om ongedaan te maken.');
+    return;
+  }
+
+  const last = live.log.pop();
+  if (!last) return;
+
+  if (last.type === 'goal') {
+    if (last.team === 'A') live.scoreA = Math.max(0, live.scoreA - 1); else live.scoreB = Math.max(0, live.scoreB - 1);
+  }
+
+  const playerName = last.player || 'Onbekend';
+  const stats = live.playerStats[playerName];
+  if (stats) {
+    if (last.type === 'goal') stats.goals = Math.max(0, stats.goals - 1);
+    if (last.type === 'assist') stats.assists = Math.max(0, stats.assists - 1);
+    if (last.type === 'shot') stats.shots = Math.max(0, stats.shots - 1);
+    if (last.type === 'penalty') stats.penaltyMinutes = Math.max(0, stats.penaltyMinutes - Number(last.minutes || 0));
+    if (stats.goals === 0 && stats.assists === 0 && stats.shots === 0 && stats.penaltyMinutes === 0) {
+      delete live.playerStats[playerName];
+    }
+  }
+
+  renderLive();
+  renderStats();
+  renderRace();
+  saveState();
+}
+
+function getSummaryStats() {
+  const history = state.history || [];
+  const live = getSelectedLiveState();
+  let played = history.length;
+  let wins = 0;
+  let losses = 0;
+  let draws = 0;
+  let goalsFor = 0;
+  let goalsAgainst = 0;
+
+  history.forEach(function (match) {
+    played += 0;
+    goalsFor += Number(match.scoreA || 0);
+    goalsAgainst += Number(match.scoreB || 0);
+    if (Number(match.scoreA) > Number(match.scoreB)) wins += 1;
+    else if (Number(match.scoreA) < Number(match.scoreB)) losses += 1;
+    else draws += 1;
+  });
+
+  if (live) {
+    goalsFor += Number(live.scoreA || 0);
+    goalsAgainst += Number(live.scoreB || 0);
+  }
+
+  return { played, wins, losses, draws, goalsFor, goalsAgainst };
+}
+
+function renderStats() {
+  const summary = getSummaryStats();
+  ui.statsSummary.innerHTML = `
+    <div class="stat-card"><div class="value">${summary.played}</div><div class="label">Gespeeld</div></div>
+    <div class="stat-card"><div class="value">${summary.wins}</div><div class="label">Winst</div></div>
+    <div class="stat-card"><div class="value">${summary.goalsFor}</div><div class="label">Doelpunten voor</div></div>
+    <div class="stat-card"><div class="value">${summary.goalsAgainst}</div><div class="label">Doelpunten tegen</div></div>
+  `;
+
+  const allPlayerData = {};
+
+  function addPlayerData(name, entry) {
+    if (!entry || !name) return;
+    const clean = name.trim() || 'Onbekend';
+    if (!allPlayerData[clean]) {
+      allPlayerData[clean] = { goals: 0, assists: 0, shots: 0, penaltyMinutes: 0, matches: 0 };
+    }
+    allPlayerData[clean].goals += Number(entry.goals || 0);
+    allPlayerData[clean].assists += Number(entry.assists || 0);
+    allPlayerData[clean].shots += Number(entry.shots || 0);
+    allPlayerData[clean].penaltyMinutes += Number(entry.penaltyMinutes || 0);
+    allPlayerData[clean].matches += 1;
+  }
+
+  (state.history || []).forEach(function (match) {
+    if (!match.playerStats) return;
+    Object.keys(match.playerStats).forEach(function (name) {
+      addPlayerData(name, match.playerStats[name]);
+    });
+  });
+
+  const live = getSelectedLiveState();
+  if (live && live.playerStats) {
+    Object.keys(live.playerStats).forEach(function (name) {
+      addPlayerData(name, live.playerStats[name]);
+    });
+  }
+
+  const rows = Object.keys(allPlayerData).sort().map(function (player) {
+    const value = allPlayerData[player];
+    return `
+      <div class="table-row">
+        <div>${player}</div>
+        <div>${value.goals}</div>
+        <div>${value.assists}</div>
+        <div>${value.shots}</div>
+        <div>${value.penaltyMinutes}</div>
+      </div>
+    `;
+  });
+
+  if (!rows.length) {
+    ui.statsTable.innerHTML = '<div class="table-row"><div>Geen statistieken beschikbaar.</div></div>';
+    return;
+  }
+
+  ui.statsTable.innerHTML = `
+    <div class="table-row header">
+      <div>Speler</div>
+      <div>Goals</div>
+      <div>Assists</div>
+      <div>Schoten</div>
+      <div>Strafmin</div>
+    </div>
+    ${rows.join('')}
+  `;
+}
+
+function getRaceData() {
+  const all = {};
+
+  function addGoalKey(name, score) {
+    if (!name) return;
+    const clean = name.trim() || 'Onbekend';
+    all[clean] = (all[clean] || 0) + Number(score || 0);
+  }
+
+  (state.history || []).forEach(function (match) {
+    if (!match.playerStats) return;
+    Object.keys(match.playerStats).forEach(function (name) {
+      const stats = match.playerStats[name];
+      addGoalKey(name, stats.goals || 0);
+    });
+  });
+
+  const live = getSelectedLiveState();
+  if (live && live.playerStats) {
+    Object.keys(live.playerStats).forEach(function (name) {
+      const stats = live.playerStats[name];
+      addGoalKey(name, stats.goals || 0);
+    });
+  }
+
+  const entries = Object.keys(all).map(function (name) {
+    return { player: name, goals: all[name] };
+  }).sort(function (a, b) { return b.goals - a.goals; });
+
+  const jay = entries.find(function (item) {
+    return item.player.toLowerCase().indexOf('jay') !== -1 || item.player.indexOf('#45') !== -1;
+  }) || { player: 'Jay-Jay (#45)', goals: 0 };
+
+  const list = entries.filter(function (item) {
+    return item.player !== jay.player;
+  });
+  list.unshift(jay);
+  return list.slice(0, 6);
+}
+
+function renderRace() {
+  const data = getRaceData();
+  const max = Math.max(TARGET_SCORE, ...data.map(function (item) { return item.goals || 0; }));
+
+  ui.racePanel.innerHTML = data.map(function (item, index) {
+    const pct = Math.max(6, Math.min(100, ((Number(item.goals) || 0) / max) * 100));
+    const status = (Number(item.goals) || 0) >= TARGET_SCORE ? 'Doel bereikt!' : (Number(item.goals) || 0) + '/' + TARGET_SCORE;
+    return `
+      <div class="race-item">
+        <div class="race-top">
+          <strong>#${index + 1} ${item.player}</strong>
+          <span>${status}</span>
+        </div>
+        <div class="progress-track"><div class="progress-fill" style="width:${pct}%"></div></div>
+      </div>
+    `;
+  }).join('');
+
+  const jayGoal = data.find(function (item) { return item.player.indexOf('Jay-Jay') !== -1 || item.player.indexOf('#45') !== -1; });
+  if (jayGoal && Number(jayGoal.goals || 0) >= TARGET_SCORE) {
+    showToast('Jay-Jay heeft de 10 doelpunten bereikt!');
+  }
+}
+
+function renderHistory() {
+  const history = state.history || [];
+
+  if (!history.length) {
+    ui.historyList.innerHTML = '<div class="history-item"><h3>Geen afgeronde wedstrijden</h3><p>De volledige wedstrijdhistorie verschijnt hier.</p></div>';
+    return;
+  }
+
+  ui.historyList.innerHTML = history.slice().reverse().map(function (match) {
+    return `
+      <div class="history-item">
+        <h3>${match.date}</h3>
+        <p><strong>${match.opponent}</strong> • ${match.venue}</p>
+        <p>Eindstand: ${match.scoreA}-${match.scoreB}</p>
+        <p>${match.summary || 'Wedstrijd afgerond'}</p>
+      </div>
+    `;
+  }).join('');
+}
+
+function exportData() {
+  const blob = new Blob([JSON.stringify(state, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = 'tilburg-trappers-u11-backup.json';
+  link.click();
+  URL.revokeObjectURL(url);
+  showToast('JSON-backup geëxporteerd.');
+}
+
+function importData(file) {
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function () {
+    try {
+      const parsed = JSON.parse(reader.result);
+      const repaired = readState();
+      const next = {
+        ...repaired,
+        ...parsed,
+        teamName: parsed.teamName || repaired.teamName,
+        schedule: Array.isArray(parsed.schedule) && parsed.schedule.length ? parsed.schedule : repaired.schedule,
+        history: Array.isArray(parsed.history) ? parsed.history : repaired.history,
+        selectedMatchId: parsed.selectedMatchId || repaired.selectedMatchId,
+        matchStates: parsed.matchStates || repaired.matchStates,
+        appVersion: parsed.appVersion || repaired.appVersion
+      };
+
+      state = next;
+      saveState();
+      renderAll();
+      showToast('JSON is geïmporteerd.');
+    } catch (error) {
+      console.error('Import mislukt:', error);
+      showToast('Geldige JSON verwacht.');
+    }
+  };
+  reader.readAsText(file);
+}
+
+function clearAllData() {
+  const confirmed = window.confirm('Weet je zeker dat je alle trackergegevens wilt wissen?');
+  if (!confirmed) return;
+  localStorage.removeItem(STORAGE_KEY);
+  state = createDefaultState();
+  renderAll();
+  showToast('Gegevens zijn gewist.');
+}
+
+function saveTeamName() {
+  const name = (ui.teamNameInput.value || '').trim();
+  state.teamName = name || DEFAULT_TEAM_NAME;
+  ui.teamNameInput.value = state.teamName;
+  saveState();
+  renderAll();
+  showToast('Teamnaam is opgeslagen.');
+}
+
+function addScheduleMatch() {
+  const date = prompt('Datum van de wedstrijd (bijv. 23 jan 2027):', '');
+  if (date === null) return;
+  const opponent = prompt('Tegenstander:', '');
+  if (opponent === null) return;
+  const venue = prompt('Locatie / thuis-uit:', 'Thuis');
+  if (venue === null) return;
+
+  const id = 'day-' + String(Date.now()).slice(-6);
+  const newMatch = { id: id, date: (date || 'Onbekend').trim(), opponent: (opponent || 'Tegenstander').trim(), venue: (venue || 'Thuis').trim(), status: 'In planning' };
+  state.schedule.push(newMatch);
+  state.matchStates[id] = buildMatchState(id);
+  state.selectedMatchId = id;
+  saveState();
+  renderAll();
+  showToast('Wedstrijd toegevoegd.');
+}
+
+function endCurrentMatch() {
+  const selectedMatch = getSelectedMatch();
+  const live = getSelectedLiveState();
+  if (!selectedMatch || !live) return;
+
+  const summary = `Eindstand ${live.scoreA}-${live.scoreB}`;
+  state.history.push({
+    id: selectedMatch.id,
+    date: selectedMatch.date,
+    opponent: selectedMatch.opponent,
+    venue: selectedMatch.venue,
+    scoreA: live.scoreA,
+    scoreB: live.scoreB,
+    summary: summary,
+    playerStats: JSON.parse(JSON.stringify(live.playerStats || {}))
+  });
+
+  selectedMatch.status = 'Afgerond';
+  const newState = buildMatchState(selectedMatch.id);
+  newState.scoreA = 0;
+  newState.scoreB = 0;
+  state.matchStates[selectedMatch.id] = newState;
+  saveState();
+  renderAll();
+  showToast('Wedstrijd afgerond en opgeslagen.');
+}
+
+function setActiveView(viewName) {
+  ui.views.forEach(function (view) {
+    view.classList.toggle('active', view.id === viewName + 'View');
+  });
+  ui.tabs.forEach(function (tab) {
+    tab.classList.toggle('active', tab.getAttribute('data-view') === viewName);
+  });
+}
+
+function bindEvents() {
+  ui.tabs.forEach(function (tab) {
+    tab.addEventListener('click', function () {
+      setActiveView(tab.getAttribute('data-view'));
+    });
+  });
+
+  ui.startClockBtn.addEventListener('click', startClock);
+  ui.pauseClockBtn.addEventListener('click', pauseClock);
+  ui.resetClockBtn.addEventListener('click', resetClock);
+  ui.nextPeriodBtn.addEventListener('click', nextPeriod);
+  ui.recordEventBtn.addEventListener('click', recordEvent);
+  ui.undoLastBtn.addEventListener('click', undoLastEvent);
+  ui.endMatchBtn.addEventListener('click', endCurrentMatch);
+  ui.addScheduleMatchBtn.addEventListener('click', addScheduleMatch);
+  ui.quickAddMatchBtn.addEventListener('click', addScheduleMatch);
+  ui.exportBtn.addEventListener('click', exportData);
+  ui.importInput.addEventListener('change', function (event) {
+    const file = event.target.files && event.target.files[0];
+    importData(file);
+  });
+  ui.resetDataBtn.addEventListener('click', clearAllData);
+  ui.saveTeamBtn.addEventListener('click', saveTeamName);
+}
+
+function renderAll() {
+  renderSchedule();
+  renderLive();
+  renderStats();
+  renderRace();
+  renderHistory();
+  ui.teamNameInput.value = state.teamName || DEFAULT_TEAM_NAME;
+  ui.versionLabel.textContent = state.appVersion || '1.0.0';
+}
+
+bindEvents();
+renderAll();
+
+window.addEventListener('beforeunload', function () {
+  saveState();
+});
